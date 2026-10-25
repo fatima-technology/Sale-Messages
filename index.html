@@ -439,6 +439,24 @@
         html[data-theme=neon] .pin-dot { border-color: #00e5ff; box-shadow: 0 0 8px rgba(0,229,255,.6); }
         html[data-theme=neon] .pin-dot.filled { background: #ff00d4; border-color: #ff00d4; box-shadow: 0 0 12px #ff00d4; }
         html[data-theme=day] #lockScreen { background: radial-gradient(circle at 30% 20%, #93c5fd 0%, #6366f1 55%, #4f46e5 100%); }
+
+        /* ---------- Cloud sync ---------- */
+        .cloud-card { border-radius: 20px; padding: 14px; background: rgba(249,115,22,.08); border: 1px solid rgba(249,115,22,.28); }
+        .cs-off  { background: rgba(100,116,139,.2); color: #94a3b8; }
+        .cs-busy { background: rgba(59,130,246,.18); color: #60a5fa; }
+        .cs-ok   { background: rgba(16,185,129,.18); color: #34d399; }
+        .cs-err  { background: rgba(239,68,68,.18); color: #f87171; }
+        .cloud-dot { display: inline-block; width: 8px; height: 8px; border-radius: 99px; margin-left: 4px; vertical-align: middle; }
+        .cloud-dot.cs-off { background: #64748b; } .cloud-dot.cs-busy { background: #60a5fa; }
+        .cloud-dot.cs-ok { background: #34d399; box-shadow: 0 0 6px #34d399; } .cloud-dot.cs-err { background: #f87171; }
+        html[data-theme=day] .cloud-card { background: #fff7ed; border-color: #fed7aa; }
+        html[data-theme=day] .text-orange-300 { color: #ea580c !important; }
+        html[data-theme=neon] .cloud-card { border-color: #ff9100; box-shadow: 0 0 16px rgba(255,145,0,.3); }
+
+        html[data-theme=day] .text-yellow-50 { color: #713f12 !important; }
+        html[data-theme=day] .text-yellow-300, html[data-theme=day] .text-yellow-400 { color: #ca8a04 !important; }
+        html[data-theme=day] .text-emerald-100 { color: #065f46 !important; }
+        html[data-theme=day] .text-amber-300 { color: #b45309 !important; }
     </style>
 </head>
 <body class="locked bg-slate-900 text-slate-100 min-h-screen p-3 sm:p-6 flex items-start sm:items-center justify-center">
@@ -521,6 +539,12 @@
             </div><!-- /pinStep -->
 
             <button id="forgotPinBtn" onclick="forgotPin()" class="mt-6 text-xs text-indigo-100 underline hidden">PIN bhool gaye?</button>
+
+            <div id="noStorageWarn" class="hidden mt-5 w-full rounded-2xl bg-amber-400/20 border border-amber-300/50 p-3 text-[12px] text-amber-50 leading-relaxed">
+                <b><i class="fa-solid fa-triangle-exclamation mr-1"></i>Data save nahi ho raha!</b><br>
+                Ye file jis app mein khuli hai (HTML Viewer / WhatsApp preview) woh data save nahi karne deti. App band karte hi sab mit jayega.
+                File ko <b>Chrome</b> mein kholein: file par lamba dabayein ? <b>Open with ? Chrome</b>.
+            </div>
         </div>
     </div>
 
@@ -692,12 +716,22 @@
                 <span class="flex-1 text-left"><b>Opening Setup</b><small>Pichli report se shuru karein</small></span>
                 <i class="fa-solid fa-chevron-right text-slate-500 text-xs"></i>
             </button>
+            <button class="menu-item" onclick="closeMenu(); openSheet('cloudSheet')">
+                <span class="mi-icon bg-orange-500/15 text-orange-300"><i class="fa-solid fa-cloud"></i></span>
+                <span class="flex-1 text-left"><b>Cloud Sync <span id="cloudDot" class="cloud-dot"></span></b><small id="cloudMenuStatus">Firebase se jorein</small></span>
+                <i class="fa-solid fa-chevron-right text-slate-500 text-xs"></i>
+            </button>
             <button class="menu-item" onclick="closeMenu(); openHistoryModal()">
                 <span class="mi-icon bg-emerald-500/15 text-emerald-300"><i class="fa-solid fa-clock-rotate-left"></i></span>
                 <span class="flex-1 text-left"><b>History</b><small>Purani reports dekhein / copy karein</small></span>
                 <i class="fa-solid fa-chevron-right text-slate-500 text-xs"></i>
             </button>
             <div class="h-px bg-slate-700/70 my-2"></div>
+            <button class="menu-item" onclick="closeMenu(); openSheet('malikSheet')">
+                <span class="mi-icon bg-yellow-500/15 text-yellow-300"><i class="fa-solid fa-user-shield"></i></span>
+                <span class="flex-1 text-left"><b>Malik Setup</b><small id="malikMenuStatus">Malik Code &amp; GitHub settings</small></span>
+                <i class="fa-solid fa-chevron-right text-slate-500 text-xs"></i>
+            </button>
             <button class="menu-item" onclick="closeMenu(); changeUserName()">
                 <span class="mi-icon bg-sky-500/15 text-sky-300"><i class="fa-solid fa-user-pen"></i></span>
                 <span class="flex-1 text-left"><b>Apna Naam Badlein</b><small>Login par yahi naam aata hai</small></span>
@@ -758,6 +792,97 @@
         </div>
     </section>
 
+    <!-- ================= CLOUD SHEET ================= -->
+    <div id="cloudSheetBackdrop" class="sheet-backdrop" onclick="closeSheet('cloudSheet')"></div>
+    <section id="cloudSheet" class="bottom-sheet">
+        <div class="sheet-handle"></div>
+        <div class="sheet-head">
+            <h3><i class="fa-solid fa-cloud text-orange-400"></i> Cloud Sync (Firebase)</h3>
+            <button onclick="closeSheet('cloudSheet')"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="sheet-body space-y-4">
+            <div id="cloudStatusCard" class="cloud-card">
+                <div class="flex items-center gap-3">
+                    <span id="cloudStatusIcon" class="w-11 h-11 rounded-2xl flex items-center justify-center text-lg"><i class="fa-solid fa-cloud"></i></span>
+                    <div class="flex-1 min-w-0">
+                        <p id="cloudStatusTitle" class="font-bold text-sm">Jura hua nahi</p>
+                        <p id="cloudStatusSub" class="text-[11px] text-slate-400 mt-0.5">Neeche Firebase config paste karein</p>
+                    </div>
+                </div>
+                <button id="cloudSyncBtn" onclick="cloudSyncNow(true)" class="w-full mt-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold py-3 rounded-2xl flex items-center justify-center gap-2 active:scale-[.98] transition">
+                    <i class="fa-solid fa-rotate"></i> Abhi Sync Karein
+                </button>
+            </div>
+
+            <div class="rounded-2xl bg-slate-900/70 border border-slate-700 p-3.5 text-[12px] text-slate-300 leading-relaxed space-y-1.5">
+                <p><i class="fa-solid fa-key text-orange-300 mr-1"></i> Aapka <b>naam + PIN</b> hi cloud ki chaabi hai.</p>
+                <p><i class="fa-solid fa-mobile-screen text-orange-300 mr-1"></i> Naye phone par <b>bilkul wahi naam aur PIN</b> dalein, data khud wapas aa jayega.</p>
+                <p><i class="fa-solid fa-wifi text-orange-300 mr-1"></i> Internet na ho to app normal chalta hai, net aate hi sync ho jata hai.</p>
+            </div>
+
+            <div id="cfgBakedNote" class="hidden rounded-2xl bg-emerald-500/10 border border-emerald-500/30 p-3.5 text-[12px] text-emerald-100">
+                <i class="fa-solid fa-lock mr-1"></i> Firebase config file ke andar laga hua hai. Kuch paste karne ki zaroorat nahi.
+            </div>
+            <div id="cfgPasteBox">
+                <div class="flex justify-between items-center mb-1.5">
+                    <label class="text-xs font-semibold uppercase tracking-wider text-slate-400">Firebase Config</label>
+                    <button onclick="pasteFromClipboard('fbConfigInput')" class="text-[11px] text-orange-300 font-semibold"><i class="fa-regular fa-paste mr-1"></i>Paste</button>
+                </div>
+                <textarea id="fbConfigInput" rows="7" class="field-area font-mono text-xs" placeholder="const firebaseConfig = {&#10;  apiKey: &quot;...&quot;,&#10;  authDomain: &quot;...&quot;,&#10;  projectId: &quot;...&quot;,&#10;  ...&#10;};"></textarea>
+                <div class="grid grid-cols-2 gap-2 mt-2">
+                    <button onclick="saveFirebaseConfig()" class="text-xs font-bold bg-orange-500 text-white py-2.5 rounded-xl"><i class="fa-solid fa-plug mr-1"></i>Save &amp; Connect</button>
+                    <button onclick="removeFirebaseConfig()" class="text-xs font-semibold bg-slate-700/70 text-slate-200 py-2.5 rounded-xl"><i class="fa-solid fa-link-slash mr-1"></i>Disconnect</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= MALIK SETUP SHEET ================= -->
+    <div id="malikSheetBackdrop" class="sheet-backdrop" onclick="closeSheet('malikSheet')"></div>
+    <section id="malikSheet" class="bottom-sheet">
+        <div class="sheet-handle"></div>
+        <div class="sheet-head">
+            <h3><i class="fa-solid fa-user-shield text-yellow-400"></i> Malik Setup</h3>
+            <button onclick="closeSheet('malikSheet')"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="sheet-body space-y-4">
+            <div class="rounded-2xl bg-yellow-500/10 border border-yellow-500/30 p-3.5 text-[12px] text-yellow-50 leading-relaxed">
+                <b>Malik Code kya hai?</b> Agar koi SR apna PIN bhool jaye, to aap ye code daal kar uska <b>naya PIN</b> banwa sakte hain. Uska data aur history <b>nahi mitegi</b>.
+                <br>Ye setup sirf aap (malik) ek dafa karein, SR ko na dikhayein.
+            </div>
+
+            <div id="malikActiveCard" class="hidden rounded-2xl bg-emerald-500/10 border border-emerald-500/30 p-3.5 text-[12px] text-emerald-100">
+                <i class="fa-solid fa-circle-check mr-1"></i> <b>Malik Code file mein laga hua hai.</b> Sab phones par "PIN bhool gaye?" ab Malik Code maangega.
+            </div>
+
+            <div class="field">
+                <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Naya Malik Code (kam az kam 6, letters + numbers behtar)</label>
+                <div class="tagged"><i class="fa-solid fa-key"></i><input type="password" id="malikCode1" autocomplete="new-password" placeholder="Jaise: qadir2026"></div>
+            </div>
+            <div class="field">
+                <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Malik Code dobara</label>
+                <div class="tagged"><i class="fa-solid fa-key"></i><input type="password" id="malikCode2" autocomplete="new-password" placeholder="Wahi code dobara"></div>
+            </div>
+            <button onclick="buildMalikSettings()" class="w-full bg-gradient-to-r from-yellow-500 to-amber-600 text-white font-bold py-3.5 rounded-2xl flex items-center justify-center gap-2 active:scale-[.98] transition">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> Settings Lines Banayein
+            </button>
+
+            <div id="malikOutBox" class="hidden space-y-2">
+                <label class="text-xs font-semibold uppercase tracking-wider text-slate-400">Ye 2 lines copy karein</label>
+                <textarea id="malikOut" rows="5" readonly class="field-area font-mono text-[11px]"></textarea>
+                <button onclick="copyMalikLines()" class="w-full text-sm font-bold bg-emerald-600 text-white py-3 rounded-2xl"><i class="fa-regular fa-copy mr-1"></i>Copy Lines</button>
+                <div class="rounded-2xl bg-slate-900/70 border border-slate-700 p-3.5 text-[12px] text-slate-300 leading-relaxed">
+                    <b>Ab GitHub par:</b><br>
+                    1. Apni repo mein <b>index.html</b> kholein ? ?? (Edit) dabayein.<br>
+                    2. <b>Ctrl+F</b> se <code>MALIK SETTINGS</code> dhoondein.<br>
+                    3. Neeche ki 2 lines (<code>const FIREBASE_CONFIG_ENC</code> aur <code>const MALIK_CODE_HASH</code>) mita kar ye copy ki hui lines paste karein.<br>
+                    4. <b>Commit changes</b> dabayein. 1-2 minute mein sab phones par lag jayega.
+                </div>
+                <p id="malikNoCfgNote" class="hidden text-[11px] text-amber-300"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Is phone par Firebase config nahi mila, is liye config khali rahegi. Pehle Menu ? Cloud Sync mein config jorein, phir dobara banayein.</p>
+            </div>
+        </div>
+    </section>
+
     <!-- ================= OPENING SHEET ================= -->
     <div id="openingSheetBackdrop" class="sheet-backdrop" onclick="closeSheet('openingSheet')"></div>
     <section id="openingSheet" class="bottom-sheet">
@@ -798,7 +923,7 @@
             <button onclick="applyOpening()" class="w-full bg-gradient-to-r from-purple-500 to-fuchsia-600 text-white font-bold py-3.5 rounded-2xl shadow-lg shadow-purple-900/40 flex items-center justify-center gap-2 active:scale-[.98] transition">
                 <i class="fa-solid fa-check"></i> Apply Opening
             </button>
-            <p class="text-[11px] text-slate-400 leading-relaxed">Example: 22/10/26 ki report → Booking 12420, MTD 489210. Apply karne par 23/10/26 ka din ready ho jayega (Yesterday 12420, MTD = 489210 + 12420).</p>
+            <p class="text-[11px] text-slate-400 leading-relaxed">Example: 22/10/26 ki report ? Booking 12420, MTD 489210. Apply karne par 23/10/26 ka din ready ho jayega (Yesterday 12420, MTD = 489210 + 12420).</p>
         </div>
     </section>
 
@@ -827,6 +952,62 @@
     </div>
 
     <script>
+        // ---------- Storage na ho to bhi app chale ----------
+        // Kuch viewers (file manager ka HTML Viewer, WhatsApp preview) data save nahi karne dete.
+        // Wahan memory mein rakh kar app chalate hain taa ke naam/PIN par atak na jaye.
+        (function ensureStorage() {
+            function works(st) {
+                try { const k = '__wa_test'; st.setItem(k, '1'); const ok = st.getItem(k) === '1'; st.removeItem(k); return ok; }
+                catch (e) { return false; }
+            }
+            function memStore() {
+                const m = {};
+                return {
+                    getItem: k => (Object.prototype.hasOwnProperty.call(m, k) ? m[k] : null),
+                    setItem: (k, v) => { m[k] = String(v); },
+                    removeItem: k => { delete m[k]; },
+                    clear: () => { Object.keys(m).forEach(k => delete m[k]); },
+                    key: i => Object.keys(m)[i] ?? null,
+                    get length() { return Object.keys(m).length; }
+                };
+            }
+            ['localStorage', 'sessionStorage'].forEach(name => {
+                let ok = false;
+                try { ok = !!window[name] && works(window[name]); } catch (e) {}
+                if (ok) return;
+                const shim = memStore();
+                try { Object.defineProperty(window, name, { value: shim, configurable: true, writable: true }); } catch (e) {}
+                try { if (window[name] !== shim) window[name] = shim; } catch (e) {}
+                if (name === 'localStorage') window.__noStorage = true;
+            });
+        })();
+
+        // ======================= MALIK SETTINGS =======================
+        // Menu ? "Malik Setup" in dono lines ko khud bana deta hai.
+        // GitHub par index.html edit karke sirf ye 2 lines badalni hain.
+        const FIREBASE_CONFIG_ENC = 'DENMAwgnAEMYXEF7c01SYkA2URsLBzlcQlJXNAprYXtoekY3QyomOlxRcRwseAtaaXAbW0NMBhUEIVVXBwpUGA0RQlgbBAAeBB8WW10DEBRcXkFUWxYSSBIRHEtZVQtBFhhHQV5TEgJZOgVOXxhJBw9fF1pU3C9N687VcJ9yJDQkZfmdX2CdJvHt5FbThZbVgNOV19EQFBeEhIDFQgeAFhbFQZJTlhBUF4ST0wDEU5JGFcDEElbUFpfXiQEQxcEHixeGFxBDQsPBQQOQlQYQ1hZRxYYBxNKc1MRCxtGWxpCWVpQDQ9TVgoDAglGXBVbHkFWCAcNCV5UWQ8GAwFdQABOFVYIVxhH';
+        const MALIK_CODE_HASH = '';
+        // ==============================================================
+
+        // Config code ki shakal mein rakha hai taa ke file mein seedha nazar na aaye
+        const CFG_MASK = 'wa-sale::fc::7319';
+        function encodeCfg(obj) {
+            const str = JSON.stringify(obj);
+            let out = '';
+            for (let i = 0; i < str.length; i++) out += String.fromCharCode(str.charCodeAt(i) ^ CFG_MASK.charCodeAt(i % CFG_MASK.length));
+            return btoa(out);
+        }
+        function decodeCfg(enc) {
+            if (!enc) return null;
+            try {
+                const bin = atob(enc);
+                let str = '';
+                for (let i = 0; i < bin.length; i++) str += String.fromCharCode(bin.charCodeAt(i) ^ CFG_MASK.charCodeAt(i % CFG_MASK.length));
+                const c = JSON.parse(str);
+                return c && c.apiKey && c.projectId ? c : null;
+            } catch (e) { return null; }
+        }
+        const FIREBASE_CONFIG = decodeCfg(FIREBASE_CONFIG_ENC);
         const STORAGE_KEY = 'wa_sale_state_v3';
         const HISTORY_KEY = 'wa_sale_history_v3';
         const UNDO_KEY = 'wa_sale_undo_v3';
@@ -899,7 +1080,11 @@ W/s.{execWs}
             catch (e) { return fallback; }
         }
         function writeJSON(key, val) {
-            try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {}
+            const str = JSON.stringify(val);
+            let prev = null;
+            try { prev = localStorage.getItem(key); localStorage.setItem(key, str); } catch (e) {}
+            // Data badla to cloud par bhejne ki baari lagao (pehli dafa wala default save nahi ginte)
+            if ((key === STORAGE_KEY || key === HISTORY_KEY) && prev !== null && prev !== str) onLocalDataChanged();
         }
 
         // ---------- Load / Save ----------
@@ -1342,13 +1527,18 @@ W/s.{execWs}
         }
 
         const NAME_KEY = 'wa_sale_user_name';
-        function getUserName() { try { return (localStorage.getItem(NAME_KEY) || '').trim(); } catch (e) { return ''; } }
+        let memUserName = '';
+        function getUserName() {
+            let n = '';
+            try { n = (localStorage.getItem(NAME_KEY) || '').trim(); } catch (e) {}
+            return n || memUserName;
+        }
         function firstName(n) { return (n || '').split(/\s+/)[0]; }
         function titleCase(n) { return n.toLowerCase().replace(/(^|\s)\S/g, c => c.toUpperCase()); }
 
         function updateGreeting() {
             const n = getUserName();
-            $('hdrGreeting').textContent = n ? 'Assalam o Alaikum, ' + titleCase(n) + ' 👋' : 'Daily Sale Report & MTD Tracker';
+            $('hdrGreeting').textContent = n ? 'Assalam o Alaikum, ' + titleCase(n) + ' ??' : 'Daily Sale Report & MTD Tracker';
         }
 
         function showNameStep() {
@@ -1366,6 +1556,7 @@ W/s.{execWs}
         function saveUserName() {
             const n = $('userNameInput').value.trim().replace(/\s+/g, ' ');
             if (n.length < 2) { lockError('Kam az kam 2 harf ka naam likhein'); return; }
+            memUserName = n;
             try { localStorage.setItem(NAME_KEY, n); } catch (e) {}
             $('userNameInput').value = '';
             updateGreeting();
@@ -1383,6 +1574,7 @@ W/s.{execWs}
         }
 
         function startLockScreen() {
+            if (window.__noStorage) $('noStorageWarn').classList.remove('hidden');
             pinEntry = ''; pinFirst = '';
             $('lockError').textContent = '';
             if (!getUserName()) { showNameStep(); return; }
@@ -1413,11 +1605,19 @@ W/s.{execWs}
             if (pinMode === 'confirm') {
                 if (pin !== pinFirst) {
                     pinMode = 'set'; pinFirst = '';
-                    setLockText('Assalam o Alaikum, ' + titleCase(firstName(getUserName())) + '!', 'Naya 4 digit PIN banayein');
+                    setLockText(recoveringPin ? 'Malik Code sahi hai ?' : 'Assalam o Alaikum, ' + titleCase(firstName(getUserName())) + '!', 'Naya 4 digit PIN banayein');
                     lockError('PIN match nahi hua, dobara banayein');
                     return;
                 }
                 try { localStorage.setItem(PIN_KEY, await hashPin(pin)); } catch (e) {}
+                await makeSyncId(pin);
+                if (recoveringPin) {
+                    // Is phone ka data hi asal hai: naye PIN wali cloud jagah par yahi jaye
+                    try { localStorage.setItem(LOCAL_TS_KEY, String(Date.now())); } catch (e) {}
+                    recoveringPin = false;
+                    unlockApp('Naya PIN lag gaya! Data safe hai ?');
+                    return;
+                }
                 unlockApp('PIN set ho gaya!');
                 return;
             }
@@ -1428,6 +1628,7 @@ W/s.{execWs}
             }
             if ((await hashPin(pin)) === getSavedPin()) {
                 pinAttempts = 0;
+                if (!getSyncId()) await makeSyncId(pin);
                 unlockApp();
             } else {
                 pinAttempts++;
@@ -1459,6 +1660,7 @@ W/s.{execWs}
 
         function unlockApp(msg) {
             try { sessionStorage.setItem(SESSION_KEY, '1'); } catch (e) {}
+            setTimeout(() => cloudSyncNow(false), 900);
             const ch = $('charBody');
             ch.classList.add('char-happy');
             $('charMouth').setAttribute('d', 'M93 83 q8 8 16 0');
@@ -1479,17 +1681,86 @@ W/s.{execWs}
             startLockScreen();
         }
 
-        function forgotPin() {
-            const ok = confirm('PIN bhool gaye?\n\nNaya PIN banane ke liye app ka SAARA data aur history delete ho jayegi. Phir Opening Setup se dobara shuru karna hoga.\n\nKya aap sure hain?');
+
+        // ---------- Malik Code (PIN recovery) ----------
+        let recoveringPin = false;
+
+        async function hashMalik(code) {
+            const text = 'wa-malik-code::' + code.trim();
+            try {
+                const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+                return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+            } catch (e) {
+                let h1 = 7, h2 = 99991;
+                for (let i = 0; i < text.length; i++) { const c = text.charCodeAt(i); h1 = (h1 * 31 + c) >>> 0; h2 = (h2 * 37) ^ c; }
+                return ('m' + h1.toString(16) + (h2 >>> 0).toString(16)).padEnd(64, '0').slice(0, 64);
+            }
+        }
+
+        function refreshMalikStatus() {
+            const on = !!MALIK_CODE_HASH;
+            $('malikActiveCard').classList.toggle('hidden', !on);
+            $('malikMenuStatus').textContent = on ? 'Malik Code laga hua hai ?' : 'Malik Code & GitHub settings';
+        }
+
+        async function buildMalikSettings() {
+            const a = $('malikCode1').value.trim(), b = $('malikCode2').value.trim();
+            if (a.length < 6) { showToast('Malik Code kam az kam 6 harf/number ka ho', true); return; }
+            if (a !== b) { showToast('Dono codes match nahi hue', true); return; }
+            const h = await hashMalik(a);
+            const cfg = getFirebaseConfig();
+            const lines =
+                "const FIREBASE_CONFIG_ENC = '" + (cfg ? encodeCfg(cfg) : '') + "';\n" +
+                "const MALIK_CODE_HASH = '" + h + "';";
+            $('malikOut').value = lines;
+            $('malikOutBox').classList.remove('hidden');
+            $('malikNoCfgNote').classList.toggle('hidden', !!cfg);
+            $('malikCode1').value = ''; $('malikCode2').value = '';
+            $('malikOutBox').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        async function copyMalikLines() {
+            const ok = await copyText($('malikOut').value);
+            showToast(ok ? 'Lines copy ho gayi! Ab GitHub par paste karein' : 'Copy nahi hua, khud select karke copy karein', !ok);
+        }
+
+        function wipeAndRestart() {
+            const ok = confirm('Is phone ka SAARA data aur history delete ho jayegi aur naya naam/PIN banega.\n\n(Cloud par purana data mehfooz rahega.)\n\nKya aap sure hain?');
             if (!ok) return;
             const word = prompt('Confirm karne ke liye DELETE likhein:');
             if ((word || '').trim().toUpperCase() !== 'DELETE') { showToast('Cancel ho gaya', true); return; }
             try {
-                [PIN_KEY, NAME_KEY, STORAGE_KEY, HISTORY_KEY, UNDO_KEY].forEach(k => localStorage.removeItem(k));
+                [PIN_KEY, NAME_KEY, STORAGE_KEY, HISTORY_KEY, UNDO_KEY, SYNC_ID_KEY, LOCAL_TS_KEY, LAST_SYNC_KEY].forEach(k => localStorage.removeItem(k));
             } catch (e) {}
+            memUserName = '';
             applyState(defaultState);
             openSheet('openingSheet');
             startLockScreen();
+        }
+
+        let malikTries = 0, malikLockedUntil = 0;
+        async function forgotPin() {
+            if (!MALIK_CODE_HASH) { wipeAndRestart(); return; }
+            if (Date.now() < malikLockedUntil) { lockError('Thori der ruk kar try karein'); return; }
+            const code = prompt('PIN bhool gaye?\n\nMalik Code dalein. Naya PIN ban jayega aur data SAFE rahega.\n\n(Malik Code nahi pata? Cancel dabayein)');
+            if (code === null) {
+                if (confirm('Malik Code ke baghair sirf SAARA data mita kar naya shuru ho sakta hai.\n\nYe karna hai?')) wipeAndRestart();
+                return;
+            }
+            if ((await hashMalik(code)) !== MALIK_CODE_HASH) {
+                malikTries++;
+                if (malikTries >= 3) { malikTries = 0; malikLockedUntil = Date.now() + 60000; lockError('3 ghalat Malik Code! 1 minute baad try karein'); }
+                else lockError('Malik Code ghalat hai');
+                return;
+            }
+            malikTries = 0;
+            recoveringPin = true;
+            pinMode = 'set'; pinEntry = ''; pinFirst = '';
+            pinAttempts = 0; pinLockedUntil = 0;
+            $('forgotPinBtn').classList.add('hidden');
+            $('lockError').textContent = '';
+            setLockText('Malik Code sahi hai ?', 'Ab ' + titleCase(firstName(getUserName())) + ' ka naya 4 digit PIN banayein');
+            renderDots();
         }
 
         document.querySelectorAll('#keypad .key').forEach(b =>
@@ -1510,6 +1781,7 @@ W/s.{execWs}
             if (unlocked && getSavedPin()) {
                 $('lockScreen').classList.add('lock-hide');
                 document.body.classList.remove('locked');
+                setTimeout(() => cloudSyncNow(false), 900);
             } else {
                 startLockScreen();
             }
@@ -1522,7 +1794,7 @@ W/s.{execWs}
         const THEMES = ['day', 'night', 'neon'];
         const THEME_META = { day: '#f1f5f9', night: '#0f172a', neon: '#07021a' };
         const THEME_ICON = { day: 'fa-sun', night: 'fa-moon', neon: 'fa-bolt' };
-        const THEME_NAME = { day: 'Day Mode ☀️', night: 'Night Mode 🌙', neon: 'Neon Mode ⚡' };
+        const THEME_NAME = { day: 'Day Mode ??', night: 'Night Mode ??', neon: 'Neon Mode ?' };
 
         function currentTheme() { return document.documentElement.getAttribute('data-theme') || 'night'; }
 
@@ -1558,6 +1830,8 @@ W/s.{execWs}
             if (viewMode) exitViewMode(false);
             if (id === 'openingSheet') prefillOpeningDate();
             if (id === 'formatSheet') $('fmtResult').classList.add('hidden');
+            if (id === 'cloudSheet') refreshCloudStatus();
+            if (id === 'malikSheet') { refreshMalikStatus(); $('malikOutBox').classList.add('hidden'); }
             $(id).classList.add('open');
             $(id + 'Backdrop').classList.add('show');
             document.body.classList.add('sheet-open');
@@ -1744,6 +2018,229 @@ W/s.{execWs}
             showToast('Bhar gaya! Check karke "Apply Opening" dabayein');
         }
 
+
+        // =========================================================
+        //  CLOUD SYNC (Firebase) — sirf naam + PIN, koi email nahi
+        // =========================================================
+        // Agar aap config yahan code mein hi daal dein to har phone par khud jur jayega:
+
+        const FB_VERSION = '10.12.2';
+        const FB_CFG_KEY = 'wa_sale_fb_config';
+        const SYNC_ID_KEY = 'wa_sale_sync_id';
+        const LOCAL_TS_KEY = 'wa_sale_local_ts';
+        const LAST_SYNC_KEY = 'wa_sale_last_sync';
+        const FB_COLLECTION = 'saleReports';
+
+        let fbHandle = null, fbInitPromise = null, cloudApplying = false, pushTimer = null, syncing = false;
+
+        function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+        function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+
+        function getFirebaseConfig() {
+            if (FIREBASE_CONFIG && FIREBASE_CONFIG.apiKey) return FIREBASE_CONFIG;
+            try { const c = JSON.parse(lsGet(FB_CFG_KEY) || 'null'); return c && c.apiKey && c.projectId ? c : null; }
+            catch (e) { return null; }
+        }
+        function getSyncId() { return lsGet(SYNC_ID_KEY); }
+
+        // Naam + PIN se ek lambi ID banti hai (SHA-256). Asal PIN cloud par nahi jata.
+        async function makeSyncId(pin) {
+            const name = getUserName().toLowerCase().replace(/\s+/g, ' ').trim();
+            const text = 'wa-sale-sync::' + name + '::' + pin;
+            let id = '';
+            try {
+                const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+                id = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+            } catch (e) {
+                let h1 = 5381, h2 = 52711;
+                for (let i = 0; i < text.length; i++) { const c = text.charCodeAt(i); h1 = (h1 * 33) ^ c; h2 = (h2 * 33) ^ c; }
+                id = ((h1 >>> 0).toString(16) + (h2 >>> 0).toString(16)).padEnd(64, '0').slice(0, 64);
+            }
+            lsSet(SYNC_ID_KEY, id);
+            return id;
+        }
+
+        // Firebase ke code jese bhi paste karein, usse config nikaal lo
+        function parseFirebaseConfig(text) {
+            const cfg = {};
+            const re = /["']?(apiKey|authDomain|projectId|storageBucket|messagingSenderId|appId|measurementId|databaseURL)["']?\s*:\s*["']([^"']+)["']/g;
+            let m;
+            while ((m = re.exec(text || ''))) cfg[m[1]] = m[2].trim();
+            return cfg.apiKey && cfg.projectId ? cfg : null;
+        }
+
+        async function initFirebase() {
+            if (fbHandle) return fbHandle;
+            if (fbInitPromise) return fbInitPromise;
+            const cfg = getFirebaseConfig();
+            if (!cfg) throw new Error('NO_CONFIG');
+            fbInitPromise = (async () => {
+                const base = 'https://www.gstatic.com/firebasejs/' + FB_VERSION + '/';
+                const [appMod, authMod, fs] = await Promise.all([
+                    import(base + 'firebase-app.js'),
+                    import(base + 'firebase-auth.js'),
+                    import(base + 'firebase-firestore.js')
+                ]);
+                const app = appMod.getApps().length ? appMod.getApp() : appMod.initializeApp(cfg);
+                const auth = authMod.getAuth(app);
+                if (!auth.currentUser) await authMod.signInAnonymously(auth);
+                fbHandle = { db: fs.getFirestore(app), fs };
+                return fbHandle;
+            })();
+            try { return await fbInitPromise; }
+            catch (e) { fbInitPromise = null; throw e; }
+        }
+
+        function friendlyFbError(e) {
+            const code = (e && (e.code || e.message)) || '';
+            if (code === 'NO_CONFIG') return 'Firebase config nahi mila';
+            if (/admin-restricted|operation-not-allowed/.test(code)) return 'Firebase mein "Anonymous" login on nahi hai';
+            if (/permission-denied|insufficient/.test(code)) return 'Firestore Rules sahi nahi lage';
+            if (/api-key|invalid-api-key/.test(code)) return 'apiKey ghalat hai, config dobara paste karein';
+            if (/network|offline|unavailable|Failed to fetch|import/i.test(code) || !navigator.onLine) return 'Internet nahi hai, net aane par sync hoga';
+            if (/not-found|NOT_FOUND/.test(code)) return 'Firestore Database abhi bana nahi';
+            return 'Sync nahi hua: ' + String(code).slice(0, 80);
+        }
+
+        function setCloudStatus(kind, title, sub) {
+            const icon = $('cloudStatusIcon'), dot = $('cloudDot');
+            const map = {
+                off:  ['fa-cloud', 'cs-off'],
+                busy: ['fa-rotate fa-spin', 'cs-busy'],
+                ok:   ['fa-cloud-arrow-up', 'cs-ok'],
+                err:  ['fa-triangle-exclamation', 'cs-err']
+            }[kind];
+            icon.className = 'w-11 h-11 rounded-2xl flex items-center justify-center text-lg ' + map[1];
+            icon.innerHTML = `<i class="fa-solid ${map[0]}"></i>`;
+            dot.className = 'cloud-dot ' + map[1];
+            $('cloudStatusTitle').textContent = title;
+            $('cloudStatusSub').textContent = sub || '';
+            $('cloudMenuStatus').textContent = title;
+        }
+
+        function refreshCloudStatus() {
+            const baked = !!(FIREBASE_CONFIG && FIREBASE_CONFIG.apiKey);
+            $('cfgBakedNote').classList.toggle('hidden', !baked);
+            $('cfgPasteBox').classList.toggle('hidden', baked);
+            if (!getFirebaseConfig()) { setCloudStatus('off', 'Jura hua nahi', 'Neeche Firebase config paste karein'); return; }
+            const last = num(lsGet(LAST_SYNC_KEY));
+            setCloudStatus(last ? 'ok' : 'off', last ? 'Cloud se jura hua ?' : 'Config save hai',
+                last ? 'Aakhri sync: ' + new Date(last).toLocaleString() : 'Sync ka intezar...');
+        }
+
+        function onLocalDataChanged() {
+            if (cloudApplying) return;
+            lsSet(LOCAL_TS_KEY, String(Date.now()));
+            if (!getFirebaseConfig() || !getSyncId()) return;
+            clearTimeout(pushTimer);
+            pushTimer = setTimeout(() => pushToCloud(), 4000);
+        }
+
+        async function pushToCloud() {
+            const id = getSyncId();
+            if (!id || !getFirebaseConfig()) return false;
+            const f = await initFirebase();
+            const ts = num(lsGet(LOCAL_TS_KEY)) || Date.now();
+            await f.fs.setDoc(f.fs.doc(f.db, FB_COLLECTION, id), {
+                stateJson: lsGet(STORAGE_KEY) || 'null',
+                historyJson: lsGet(HISTORY_KEY) || '[]',
+                updatedAtMs: ts,
+                name: getUserName(),
+                serverTime: f.fs.serverTimestamp()
+            });
+            lsSet(LAST_SYNC_KEY, String(Date.now()));
+            refreshCloudStatus();
+            return true;
+        }
+
+        // Cloud aur phone ka data milao: jo naya ho woh jeetay, history dono ki jama
+        async function cloudSyncNow(manual) {
+            if (syncing) return;
+            if (!getFirebaseConfig()) { if (manual) showToast('Pehle Firebase config paste karein', true); refreshCloudStatus(); return; }
+            if (!getSyncId()) { if (manual) showToast('Ek dafa lock karke PIN dobara dalein', true); return; }
+            if (document.body.classList.contains('locked')) return;
+            syncing = true;
+            setCloudStatus('busy', 'Sync ho raha hai...', 'Thora intezar karein');
+            try {
+                const f = await initFirebase();
+                const snap = await f.fs.getDoc(f.fs.doc(f.db, FB_COLLECTION, getSyncId()));
+                const localTs = num(lsGet(LOCAL_TS_KEY));
+                let restored = false;
+
+                if (snap.exists()) {
+                    const c = snap.data();
+                    const cloudTs = num(c.updatedAtMs);
+                    let cState = null, cHist = [];
+                    try { cState = JSON.parse(c.stateJson || 'null'); } catch (e) {}
+                    try { cHist = JSON.parse(c.historyJson || '[]') || []; } catch (e) {}
+                    const cloudNewer = cloudTs > localTs;
+
+                    // History jama karo (ek date ki ek report)
+                    const byDate = {};
+                    const localHist = readJSON(HISTORY_KEY, []);
+                    (cloudNewer ? localHist : cHist).forEach(h => { if (h && h.date) byDate[h.date] = h; });
+                    (cloudNewer ? cHist : localHist).forEach(h => { if (h && h.date) byDate[h.date] = h; });
+                    const merged = Object.values(byDate).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 200);
+
+                    cloudApplying = true;
+                    try {
+                        writeJSON(HISTORY_KEY, merged);
+                        if (cloudNewer && cState) {
+                            if (viewMode) exitViewMode(false);
+                            applyState(cState);
+                            lsSet(LOCAL_TS_KEY, String(cloudTs));
+                            restored = true;
+                        }
+                    } finally { cloudApplying = false; }
+                    renderDateHint();
+
+                    const needPush = !cloudNewer && localTs > cloudTs || JSON.stringify(merged) !== JSON.stringify(cHist);
+                    if (needPush) await pushToCloud();
+                } else {
+                    await pushToCloud();
+                }
+                lsSet(LAST_SYNC_KEY, String(Date.now()));
+                refreshCloudStatus();
+                if (restored && !localTs) showToast('?? Aapka purana data cloud se wapas aa gaya!');
+                else if (restored) showToast('?? Doosre phone wala naya data aa gaya');
+                else if (manual) showToast('?? Sync ho gaya');
+            } catch (e) {
+                const msg = friendlyFbError(e);
+                setCloudStatus('err', 'Sync nahi hua', msg);
+                if (manual) showToast(msg, true);
+            } finally {
+                syncing = false;
+            }
+        }
+
+        async function saveFirebaseConfig() {
+            const cfg = parseFirebaseConfig($('fbConfigInput').value);
+            if (!cfg) { showToast('Config samajh nahi aaya. Firebase wala poora code paste karein', true); return; }
+            lsSet(FB_CFG_KEY, JSON.stringify(cfg));
+            fbHandle = null; fbInitPromise = null;
+            $('fbConfigInput').value = '';
+            showToast('Config save ho gaya, jor rahe hain...');
+            await cloudSyncNow(true);
+        }
+
+        function removeFirebaseConfig() {
+            if (!lsGet(FB_CFG_KEY)) { showToast('Pehle se jura hua nahi', true); return; }
+            if (!confirm('Is phone ko Firebase se hata dein? (Cloud ka data delete nahi hoga)')) return;
+            try { localStorage.removeItem(FB_CFG_KEY); localStorage.removeItem(LAST_SYNC_KEY); } catch (e) {}
+            fbHandle = null; fbInitPromise = null;
+            refreshCloudStatus();
+            showToast('Firebase se hata diya');
+        }
+
+        window.addEventListener('online', () => { if (getFirebaseConfig()) cloudSyncNow(false); });
+        document.addEventListener('visibilitychange', () => {
+            // App band karte waqt jo baqi hai foran bhej do
+            if (document.visibilityState === 'hidden' && pushTimer) {
+                clearTimeout(pushTimer); pushTimer = null;
+                pushToCloud().catch(() => {});
+            }
+        });
+
         // ---------- Opening Setup ----------
         function prefillOpeningDate() {
             if (!$('openDate').value) {
@@ -1828,6 +2325,8 @@ W/s.{execWs}
         });
 
         setTheme(currentTheme(), true);
+        refreshCloudStatus();
+        refreshMalikStatus();
         loadData();
         renderDateHint();
         updateGreeting();
