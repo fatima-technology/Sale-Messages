@@ -1,0 +1,2375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Daily Sale Report System</title>
+    <meta name="theme-color" content="#0f172a">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="icon-192.png">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Sale Report">
+    <script>
+        (function () {
+            var t = 'night';
+            try { t = localStorage.getItem('wa_sale_theme') || 'night'; } catch (e) {}
+            document.documentElement.setAttribute('data-theme', t);
+        })();
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* ---------- PIN Lock Screen ---------- */
+        #lockScreen { background: radial-gradient(circle at 30% 20%, #6d7cff 0%, #4f5df5 45%, #3640c9 100%); }
+        body.locked { overflow: hidden; }
+        body.locked #appRoot { visibility: hidden; }
+
+        .char-float { animation: floaty 3s ease-in-out infinite; transform-origin: 100px 230px; }
+        @keyframes floaty { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+
+        .char-arm { transform-origin: 128px 112px; animation: wave 1.6s ease-in-out infinite; }
+        @keyframes wave { 0%,100% { transform: rotate(-10deg); } 50% { transform: rotate(-55deg); } }
+
+        .char-eye { animation: blink 4s infinite; transform-origin: center; transform-box: fill-box; }
+        @keyframes blink { 0%,92%,100% { transform: scaleY(1); } 95% { transform: scaleY(0.1); } }
+
+        .char-shake .char-head { animation: headshake .5s ease-in-out 2; transform-origin: 100px 80px; }
+        @keyframes headshake { 0%,100% { transform: rotate(0); } 25% { transform: rotate(-12deg); } 75% { transform: rotate(12deg); } }
+
+        .char-happy { animation: jump .6s ease-out 2 !important; }
+        @keyframes jump { 0%,100% { transform: translateY(0); } 40% { transform: translateY(-24px); } }
+
+        .bag-bounce { animation: bag 2.4s ease-in-out infinite; transform-origin: 165px 245px; }
+        @keyframes bag { 0%,100% { transform: rotate(0); } 50% { transform: rotate(-4deg); } }
+
+        .pin-dot { width: 16px; height: 16px; border-radius: 999px; border: 2px solid rgba(255,255,255,.7); transition: all .15s; }
+        .pin-dot.filled { background: #fff; border-color: #fff; transform: scale(1.1); }
+        .pin-dots.shake { animation: dotshake .4s; }
+        @keyframes dotshake { 0%,100% { transform: translateX(0); } 20%,60% { transform: translateX(-10px); } 40%,80% { transform: translateX(10px); } }
+
+        .key { height: 60px; border-radius: 18px; background: rgba(255,255,255,.14); color: #fff; font-size: 24px; font-weight: 600;
+               backdrop-filter: blur(4px); transition: transform .08s, background .15s; -webkit-tap-highlight-color: transparent; user-select: none; }
+        .key:active { transform: scale(.92); background: rgba(255,255,255,.3); }
+        .lock-fade { transition: opacity .35s, transform .35s; }
+        .lock-hide { opacity: 0; transform: scale(1.04); pointer-events: none; }
+
+        /* ---------- Modern Input Fields ---------- */
+        #appRoot input:not([type=checkbox]):not([type=radio]),
+        #appRoot #msgTemplate {
+            width: 100%;
+            background: linear-gradient(180deg, rgba(30,41,59,.85), rgba(15,23,42,.95)) !important;
+            border: 1.5px solid rgba(148,163,184,.16) !important;
+            border-radius: 14px !important;
+            padding: 12px 14px !important;
+            font-size: 15px !important;
+            color: #f1f5f9;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 1px 2px rgba(0,0,0,.25);
+            transition: border-color .2s, box-shadow .2s, background .2s, transform .15s;
+            outline: none !important;
+            color-scheme: dark;
+        }
+        #appRoot input::placeholder, #appRoot textarea::placeholder { color: #64748b; font-weight: 500; }
+        #appRoot input:not([readonly]):hover { border-color: rgba(148,163,184,.32) !important; }
+        #appRoot input:not([readonly]):focus,
+        #appRoot #msgTemplate:focus {
+            border-color: #34d399 !important;
+            background: linear-gradient(180deg, rgba(30,41,59,1), rgba(17,24,39,1)) !important;
+            box-shadow: 0 0 0 4px rgba(52,211,153,.16), 0 6px 18px -6px rgba(16,185,129,.45) !important;
+        }
+        #appRoot input[readonly] {
+            background: rgba(15,23,42,.5) !important;
+            border-style: dashed !important;
+            cursor: default;
+        }
+
+        /* Number fields: bari, saaf digits, bina spinner */
+        #appRoot input[type=number] {
+            font-size: 18px !important;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: .3px;
+            -moz-appearance: textfield;
+        }
+        #appRoot input[type=number]::-webkit-outer-spin-button,
+        #appRoot input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+        /* "Rs" badge wale amount fields */
+        .money { position: relative; }
+        .money::before {
+            content: 'Rs';
+            position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+            font-size: 10px; font-weight: 800; letter-spacing: .5px;
+            color: #34d399; background: rgba(52,211,153,.12);
+            padding: 3px 6px; border-radius: 7px; pointer-events: none; z-index: 1;
+        }
+        #appRoot .money input:not([type=checkbox]):not([type=radio]) { padding-left: 50px !important; }
+        .money:focus-within::before { background: #34d399; color: #022c22; }
+
+        /* Icon wale text fields */
+        .tagged { position: relative; }
+        .tagged > i {
+            position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
+            font-size: 13px; color: #64748b; pointer-events: none; z-index: 1; transition: color .2s;
+        }
+        #appRoot .tagged input:not([type=checkbox]):not([type=radio]) { padding-left: 36px !important; }
+        .tagged:focus-within > i { color: #34d399; }
+
+        /* Date picker icon white */
+        #appRoot input[type=date]::-webkit-calendar-picker-indicator { filter: invert(1) opacity(.6); cursor: pointer; }
+
+        /* Labels */
+        #appRoot label.block { letter-spacing: .06em; margin-bottom: 6px; }
+
+        /* Brand rows */
+        #appRoot .brand-row input { font-size: 14px !important; padding-top: 10px !important; padding-bottom: 10px !important; }
+        #appRoot .brand-row input[type=number] { font-size: 16px !important; padding-right: 10px !important; }
+        #appRoot .brand-row .money input:not([type=checkbox]):not([type=radio]) { padding-left: 44px !important; }
+        #appRoot .brand-row .money::before { left: 8px; }
+        #appRoot .brand-row .tagged input:not([type=checkbox]):not([type=radio]) { padding-left: 32px !important; padding-right: 8px !important; font-size: 13.5px !important; }
+        #appRoot .brand-row .tagged > i { left: 11px; font-size: 11px; }
+        #appRoot .tagged input:not([type=checkbox]):not([type=radio]) { padding-right: 10px !important; }
+        .del-btn {
+            flex-shrink: 0; width: 40px; height: 44px; border-radius: 12px;
+            color: #f87171; background: rgba(248,113,113,.1); border: 1px solid rgba(248,113,113,.2);
+            transition: background .15s, transform .1s;
+        }
+        .del-btn:active { transform: scale(.92); background: rgba(248,113,113,.25); }
+
+        /* Opening card ke fields purple focus */
+        #openingCardBody input:focus { border-color: #a78bfa !important; box-shadow: 0 0 0 4px rgba(167,139,250,.18) !important; }
+        #openingCardBody .money::before { color: #c4b5fd; background: rgba(167,139,250,.15); }
+        #openingCardBody .money:focus-within::before { background: #a78bfa; color: #1e1b4b; }
+        /* Yesterday card amber */
+        #yestRetail:focus, #yestWs:focus { border-color: #fbbf24 !important; box-shadow: 0 0 0 4px rgba(251,191,36,.16) !important; }
+
+        /* ---------- Uthne wale (lift) fields ---------- */
+        .money, .tagged, #appRoot input[type=date] {
+            transition: transform .35s cubic-bezier(.34,1.56,.64,1), box-shadow .3s, border-color .2s, background .2s !important;
+            will-change: transform;
+        }
+        .money:focus-within, .tagged:focus-within {
+            transform: translateY(-5px) scale(1.03);
+            z-index: 5;
+        }
+        .money:focus-within input, .tagged:focus-within input,
+        #appRoot input[type=date]:focus {
+            box-shadow: 0 16px 30px -12px rgba(16,185,129,.6), 0 0 0 4px rgba(52,211,153,.16) !important;
+        }
+        #appRoot input[type=date]:focus { transform: translateY(-5px) scale(1.02); }
+        /* Label bhi slide ho kar rang badle */
+        #appRoot label.block { transition: transform .3s cubic-bezier(.34,1.56,.64,1), color .2s; transform-origin: left; display: block; }
+        #appRoot div:has(> label.block):focus-within > label.block { transform: translateX(6px) translateY(-2px); color: #34d399; }
+        #openingSheet div:has(> label.block):focus-within > label.block { color: #c4b5fd; }
+        #openingSheet .money:focus-within input, #openingSheet input[type=date]:focus {
+            box-shadow: 0 16px 30px -12px rgba(167,139,250,.6), 0 0 0 4px rgba(167,139,250,.18) !important;
+        }
+        #appRoot .money:has(#yestRetail:focus) input, #appRoot .money:has(#yestWs:focus) input {
+            box-shadow: 0 16px 30px -12px rgba(251,191,36,.55), 0 0 0 4px rgba(251,191,36,.16) !important;
+        }
+
+        /* ---------- Header buttons ---------- */
+        .hdr-btn {
+            width: 40px; height: 40px; border-radius: 14px; background: rgba(15,23,42,.35); color: #fff;
+            display: inline-flex; align-items: center; justify-content: center; font-size: 15px;
+            transition: background .15s, transform .1s;
+        }
+        .hdr-btn:hover { background: rgba(15,23,42,.6); }
+        .hdr-btn:active { transform: scale(.9); }
+
+        /* ---------- Side menu ---------- */
+        .sheet-backdrop {
+            position: fixed; inset: 0; background: rgba(2,6,23,.6); backdrop-filter: blur(3px);
+            opacity: 0; pointer-events: none; transition: opacity .3s; z-index: 70;
+        }
+        .sheet-backdrop.show { opacity: 1; pointer-events: auto; }
+        .side-menu {
+            position: fixed; top: 0; right: 0; bottom: 0; width: min(84vw, 330px); z-index: 80;
+            background: #0f172a; border-left: 1px solid #1e293b; box-shadow: -20px 0 40px rgba(0,0,0,.4);
+            transform: translateX(105%); transition: transform .38s cubic-bezier(.32,.72,0,1); overflow-y: auto;
+        }
+        .side-menu.open { transform: translateX(0); }
+        #menuBackdrop { z-index: 75; }
+        .menu-item {
+            width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 16px;
+            color: #e2e8f0; transition: background .15s, transform .1s;
+        }
+        .menu-item:hover { background: rgba(51,65,85,.5); }
+        .menu-item:active { transform: scale(.98); }
+        .menu-item b { display: block; font-size: 14px; font-weight: 700; }
+        .menu-item small { display: block; font-size: 11px; color: #94a3b8; margin-top: 1px; }
+        .menu-item.danger b { color: #f87171; }
+        .mi-icon { width: 40px; height: 40px; border-radius: 13px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+        /* ---------- Bottom sheets ---------- */
+        .bottom-sheet {
+            position: fixed; left: 0; right: 0; bottom: 0; margin: 0 auto; max-width: 36rem; max-height: 90vh; z-index: 72;
+            background: #111827; border: 1px solid #1f2937; border-bottom: none; border-radius: 26px 26px 0 0;
+            box-shadow: 0 -20px 50px rgba(0,0,0,.5); display: flex; flex-direction: column;
+            transform: translateY(105%); transition: transform .42s cubic-bezier(.32,.72,0,1);
+        }
+        .bottom-sheet.open { transform: translateY(0); }
+        .sheet-handle { width: 44px; height: 5px; border-radius: 9px; background: #475569; margin: 10px auto 2px; flex-shrink: 0; }
+        .sheet-head { display: flex; justify-content: space-between; align-items: center; padding: 8px 18px 12px; border-bottom: 1px solid #1f2937; flex-shrink: 0; }
+        .sheet-head h3 { font-weight: 800; font-size: 16px; display: flex; align-items: center; gap: 8px; }
+        .sheet-head button { width: 36px; height: 36px; border-radius: 12px; background: #1f2937; color: #cbd5e1; }
+        .sheet-body { padding: 16px 18px calc(24px + env(safe-area-inset-bottom)); overflow-y: auto; overscroll-behavior: contain; }
+        body.sheet-open { overflow: hidden; }
+
+        #appRoot .field-area {
+            width: 100%; background: rgba(2,6,23,.7) !important; border: 1.5px solid rgba(148,163,184,.18);
+            border-radius: 16px; padding: 12px 14px; font-size: 13px; line-height: 1.6; color: #e2e8f0; outline: none;
+            transition: border-color .2s, box-shadow .2s, transform .35s cubic-bezier(.34,1.56,.64,1);
+        }
+        #appRoot .field-area:focus { border-color: #60a5fa; box-shadow: 0 14px 28px -12px rgba(59,130,246,.55), 0 0 0 4px rgba(96,165,250,.15); transform: translateY(-3px); }
+        #openPasteMsg:focus { border-color: #a78bfa !important; box-shadow: 0 14px 28px -12px rgba(139,92,246,.55), 0 0 0 4px rgba(167,139,250,.15) !important; }
+        .check-row { display: flex; align-items: center; gap: 10px; font-size: 13px; color: #cbd5e1; padding: 10px 12px; border-radius: 14px; background: rgba(30,41,59,.6); }
+        .check-row input { width: 18px; height: 18px; accent-color: #34d399; }
+        #openingSheet .check-row input { accent-color: #a78bfa; }
+        .chip { font-size: 11px; font-weight: 600; padding: 5px 9px; border-radius: 999px; display: inline-flex; align-items: center; gap: 5px; }
+        .chip-ok { background: rgba(52,211,153,.14); color: #6ee7b7; }
+        .chip-miss { background: rgba(100,116,139,.18); color: #94a3b8; }
+        details > summary { list-style: none; }
+        details > summary::-webkit-details-marker { display: none; }
+        details > summary::after { content: '\f078'; font-family: 'Font Awesome 6 Free'; font-weight: 900; float: right; font-size: 11px; transition: transform .2s; }
+        details[open] > summary::after { transform: rotate(180deg); }
+
+        /* ---------- Purani report (view mode) ---------- */
+        .view-banner {
+            border-radius: 18px; padding: 14px; background: linear-gradient(135deg, rgba(245,158,11,.18), rgba(217,119,6,.08));
+            border: 1px solid rgba(251,191,36,.35); animation: bannerIn .35s cubic-bezier(.34,1.56,.64,1);
+        }
+        @keyframes bannerIn { from { opacity: 0; transform: translateY(-8px) scale(.98); } to { opacity: 1; transform: none; } }
+        #mainForm.view-mode input:disabled { opacity: .85; cursor: not-allowed; }
+        #mainForm.view-mode .money:focus-within, #mainForm.view-mode .tagged:focus-within { transform: none; }
+        #mainForm.view-mode button:disabled { opacity: .35; }
+        #mainForm.view-mode #msgPreview { border-color: rgba(251,191,36,.4) !important; }
+        #mainForm.view-mode #reportDate { border-color: rgba(251,191,36,.6) !important; }
+        .date-chip {
+            font-size: 11px; font-weight: 700; padding: 4px 9px; border-radius: 999px;
+            background: rgba(51,65,85,.6); color: #cbd5e1; border: 1px solid rgba(148,163,184,.15); transition: all .15s;
+        }
+        .date-chip:active { transform: scale(.94); }
+        .date-chip.active { background: rgba(251,191,36,.2); color: #fcd34d; border-color: rgba(251,191,36,.45); }
+        .date-chip.today { background: rgba(52,211,153,.18); color: #6ee7b7; border-color: rgba(52,211,153,.4); }
+
+        /* =========================================================
+           THEMES  (data-theme on <html>: day | night | neon)
+           ========================================================= */
+        html.theme-anim body, html.theme-anim body * {
+            transition: background-color .4s, border-color .4s, color .4s, box-shadow .4s !important;
+        }
+        .menu-section-title { font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: #64748b; margin-bottom: 8px; }
+        .theme-picker { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 4px; border-radius: 16px; background: rgba(30,41,59,.7); }
+        .theme-picker button {
+            display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 9px 4px; border-radius: 12px;
+            font-size: 11px; font-weight: 700; color: #94a3b8; transition: all .2s;
+        }
+        .theme-picker button i { font-size: 15px; }
+        .theme-picker button.active { background: #10b981; color: #fff; box-shadow: 0 6px 16px -6px rgba(16,185,129,.7); }
+        .theme-picker button[data-theme-btn="day"].active { background: #f59e0b; box-shadow: 0 6px 16px -6px rgba(245,158,11,.7); }
+        .theme-picker button[data-theme-btn="neon"].active { background: linear-gradient(135deg,#ff00d4,#00e5ff); box-shadow: 0 0 14px rgba(255,0,212,.6); }
+
+        /* ------------------------- DAY ------------------------- */
+        html[data-theme=day] body { background: #eef2f7 !important; color: #0f172a !important; }
+        html[data-theme=day] .bg-slate-800 { background-color: #ffffff !important; }
+        html[data-theme=day] .bg-slate-900,
+        html[data-theme=day] .bg-slate-900\/40,
+        html[data-theme=day] .bg-slate-900\/70,
+        html[data-theme=day] .bg-slate-900\/80,
+        html[data-theme=day] .bg-slate-950,
+        html[data-theme=day] .bg-slate-950\/45 { background-color: #f8fafc !important; }
+        html[data-theme=day] .bg-slate-950\/80 { background-color: rgba(15,23,42,.45) !important; }
+        html[data-theme=day] .bg-slate-700,
+        html[data-theme=day] .bg-slate-700\/70 { background-color: #e2e8f0 !important; color: #1e293b !important; }
+        html[data-theme=day] .hover\:bg-slate-600:hover { background-color: #cbd5e1 !important; }
+        html[data-theme=day] .border-slate-700,
+        html[data-theme=day] .border-slate-700\/60,
+        html[data-theme=day] .border-slate-800 { border-color: #e2e8f0 !important; }
+        html[data-theme=day] .bg-amber-950\/20 { background-color: #fffbeb !important; }
+        html[data-theme=day] .bg-teal-950\/20 { background-color: #f0fdfa !important; }
+        html[data-theme=day] .from-slate-700 { --tw-gradient-from: #f1f5f9 !important; --tw-gradient-to: #e2e8f0 !important; --tw-gradient-stops: #f1f5f9, #e2e8f0 !important; }
+        html[data-theme=day] .from-slate-700 h3 { color: #0f172a !important; }
+
+        html[data-theme=day] .text-slate-200,
+        html[data-theme=day] .text-slate-300 { color: #334155 !important; }
+        html[data-theme=day] .text-slate-400 { color: #64748b !important; }
+        html[data-theme=day] .text-slate-500 { color: #94a3b8 !important; }
+        html[data-theme=day] :is(.text-emerald-300,.text-emerald-400):not(.bg-gradient-to-r *):not(.bg-gradient-to-br *) { color: #059669 !important; }
+        html[data-theme=day] :is(.text-teal-300,.text-teal-400) { color: #0d9488 !important; }
+        html[data-theme=day] :is(.text-amber-200,.text-amber-300) { color: #b45309 !important; }
+        html[data-theme=day] .text-amber-400 { color: #d97706 !important; }
+        html[data-theme=day] .text-amber-100\/80 { color: #92400e !important; }
+        html[data-theme=day] .text-blue-100 { color: #1e3a8a !important; }
+        html[data-theme=day] :is(.text-blue-300,.text-blue-400) { color: #2563eb !important; }
+        html[data-theme=day] .text-purple-100 { color: #4c1d95 !important; }
+        html[data-theme=day] :is(.text-purple-200,.text-purple-300,.text-purple-400) { color: #7c3aed !important; }
+        html[data-theme=day] .text-sky-300 { color: #0284c7 !important; }
+        html[data-theme=day] .bg-purple-500\/10 { background-color: #f5f3ff !important; }
+        html[data-theme=day] .bg-blue-500\/10 { background-color: #eff6ff !important; }
+        html[data-theme=day] #openingSheet .bg-slate-800 { background-color: #ede9fe !important; color: #6d28d9 !important; }
+
+        html[data-theme=day] #appRoot input:not([type=checkbox]):not([type=radio]),
+        html[data-theme=day] #appRoot #msgTemplate,
+        html[data-theme=day] #appRoot .field-area {
+            background: #ffffff !important; border-color: #d5dde8 !important; color: #0f172a !important;
+            box-shadow: 0 1px 2px rgba(15,23,42,.06) !important; color-scheme: light;
+        }
+        html[data-theme=day] #appRoot input[readonly] { background: #f1f5f9 !important; }
+        html[data-theme=day] #appRoot input:not([readonly]):focus { background: #ffffff !important; }
+        html[data-theme=day] #appRoot input[type=date]::-webkit-calendar-picker-indicator { filter: none; opacity: .6; }
+        html[data-theme=day] .money::before { color: #047857; background: #d1fae5; }
+        html[data-theme=day] .money:focus-within::before { background: #10b981; color: #fff; }
+        html[data-theme=day] .money:focus-within input, html[data-theme=day] .tagged:focus-within input,
+        html[data-theme=day] #appRoot input[type=date]:focus {
+            box-shadow: 0 14px 26px -12px rgba(16,185,129,.45), 0 0 0 4px rgba(16,185,129,.14) !important; border-color: #10b981 !important;
+        }
+        html[data-theme=day] .tagged > i { color: #94a3b8; }
+        html[data-theme=day] #msgPreview { background: #f0fdf4 !important; color: #14532d !important; border-color: #bbf7d0 !important; }
+
+        html[data-theme=day] .side-menu { background: #ffffff; border-left-color: #e2e8f0; }
+        html[data-theme=day] .menu-item { color: #0f172a; }
+        html[data-theme=day] .menu-item:hover { background: #f1f5f9; }
+        html[data-theme=day] .menu-item small { color: #64748b; }
+        html[data-theme=day] .bg-slate-500\/20 { background-color: #e2e8f0 !important; }
+        html[data-theme=day] .h-px.bg-slate-700\/70 { background-color: #e2e8f0 !important; }
+        html[data-theme=day] .theme-picker { background: #f1f5f9; }
+        html[data-theme=day] .theme-picker button { color: #64748b; }
+        html[data-theme=day] .theme-picker button.active { color: #fff; }
+        html[data-theme=day] .bottom-sheet { background: #ffffff; border-color: #e2e8f0; }
+        html[data-theme=day] .sheet-head { border-bottom-color: #f1f5f9; }
+        html[data-theme=day] .sheet-head h3 { color: #0f172a; }
+        html[data-theme=day] .sheet-head button { background: #f1f5f9; color: #475569; }
+        html[data-theme=day] .sheet-handle { background: #cbd5e1; }
+        html[data-theme=day] .sheet-backdrop { background: rgba(15,23,42,.35); }
+        html[data-theme=day] .check-row { background: #f1f5f9; color: #334155; }
+        html[data-theme=day] details { border-color: #e2e8f0 !important; }
+        html[data-theme=day] .chip-ok { background: #d1fae5; color: #047857; }
+        html[data-theme=day] .chip-miss { background: #e2e8f0; color: #64748b; }
+        html[data-theme=day] .date-chip { background: #e2e8f0; color: #334155; border-color: #cbd5e1; }
+        html[data-theme=day] .date-chip.active { background: #fef3c7; color: #b45309; border-color: #fcd34d; }
+        html[data-theme=day] .date-chip.today { background: #d1fae5; color: #047857; border-color: #6ee7b7; }
+        html[data-theme=day] .view-banner { background: linear-gradient(135deg,#fef3c7,#fffbeb); border-color: #fcd34d; }
+        html[data-theme=day] .bg-amber-400\/20 { background-color: #fde68a !important; }
+        html[data-theme=day] .del-btn { background: #fef2f2; border-color: #fecaca; color: #dc2626; }
+        html[data-theme=day] #historyList pre { color: #334155 !important; }
+
+        /* ------------------------- NEON ------------------------- */
+        html[data-theme=neon] body {
+            background: radial-gradient(circle at 15% 0%, rgba(255,0,212,.18), transparent 40%),
+                        radial-gradient(circle at 90% 30%, rgba(0,229,255,.16), transparent 40%),
+                        #05010f !important;
+            background-attachment: fixed !important; color: #e9e5ff !important;
+        }
+        html[data-theme=neon] .bg-slate-800 {
+            background-color: rgba(10,4,28,.92) !important;
+            border-color: rgba(255,0,212,.55) !important;
+            box-shadow: 0 0 0 1px rgba(255,0,212,.25), 0 0 28px rgba(255,0,212,.28), 0 0 70px rgba(0,229,255,.12) !important;
+        }
+        html[data-theme=neon] .bg-gradient-to-r.from-emerald-600 {
+            background-image: linear-gradient(90deg,#ff00d4,#7c3aed 50%,#00e5ff) !important;
+            box-shadow: 0 4px 24px rgba(255,0,212,.35);
+        }
+        html[data-theme=neon] .bg-gradient-to-r.from-emerald-600 h1 { text-shadow: 0 0 8px rgba(255,255,255,.8), 0 0 18px rgba(255,0,212,.8); }
+        html[data-theme=neon] .bg-gradient-to-br.from-emerald-600 { background-image: linear-gradient(135deg,#ff00d4,#7c3aed,#00e5ff) !important; }
+        html[data-theme=neon] .hdr-btn { background: rgba(5,1,15,.45); box-shadow: inset 0 0 0 1px rgba(255,255,255,.35); }
+
+        html[data-theme=neon] .bg-slate-900,
+        html[data-theme=neon] .bg-slate-900\/40,
+        html[data-theme=neon] .bg-slate-900\/70,
+        html[data-theme=neon] .bg-slate-900\/80,
+        html[data-theme=neon] .bg-slate-950,
+        html[data-theme=neon] .bg-slate-950\/45 { background-color: rgba(8,3,24,.85) !important; }
+        html[data-theme=neon] .border-slate-700\/60 { border-color: rgba(0,229,255,.45) !important; box-shadow: 0 0 14px rgba(0,229,255,.15), inset 0 0 18px rgba(0,229,255,.05); }
+        html[data-theme=neon] .border-amber-500\/30 { border-color: rgba(255,230,0,.55) !important; box-shadow: 0 0 14px rgba(255,230,0,.15), inset 0 0 18px rgba(255,230,0,.05); }
+        html[data-theme=neon] .border-teal-500\/30 { border-color: rgba(57,255,20,.5) !important; box-shadow: 0 0 14px rgba(57,255,20,.15), inset 0 0 18px rgba(57,255,20,.05); }
+        html[data-theme=neon] .bg-amber-950\/20, html[data-theme=neon] .bg-teal-950\/20 { background-color: rgba(8,3,24,.85) !important; }
+        html[data-theme=neon] :is(.text-emerald-300,.text-emerald-400):not(.bg-gradient-to-r *):not(.bg-gradient-to-br *) { color: #00e5ff !important; text-shadow: 0 0 8px rgba(0,229,255,.75); }
+        html[data-theme=neon] .text-amber-400 { color: #ffe600 !important; text-shadow: 0 0 8px rgba(255,230,0,.7); }
+        html[data-theme=neon] .text-teal-400 { color: #39ff14 !important; text-shadow: 0 0 8px rgba(57,255,20,.7); }
+        html[data-theme=neon] .text-slate-400 { color: #b9a6ff !important; }
+        html[data-theme=neon] .text-slate-500 { color: #7c6bb8 !important; }
+        html[data-theme=neon] .bg-emerald-600\/30 { background-color: rgba(0,229,255,.12) !important; border-color: #00e5ff !important; box-shadow: 0 0 10px rgba(0,229,255,.4); }
+
+        html[data-theme=neon] #appRoot input:not([type=checkbox]):not([type=radio]),
+        html[data-theme=neon] #appRoot #msgTemplate,
+        html[data-theme=neon] #appRoot .field-area {
+            background: #07021a !important; border-color: rgba(0,229,255,.38) !important; color: #e6fdff !important;
+            box-shadow: inset 0 0 12px rgba(0,229,255,.08) !important;
+        }
+        html[data-theme=neon] #appRoot input:not([readonly]):focus { background: #0a0326 !important; }
+        html[data-theme=neon] .money::before { color: #ff4ae6; background: rgba(255,0,212,.14); text-shadow: 0 0 6px rgba(255,0,212,.8); }
+        html[data-theme=neon] .money:focus-within::before { background: #ff00d4; color: #fff; box-shadow: 0 0 12px #ff00d4; }
+        html[data-theme=neon] .money:focus-within input, html[data-theme=neon] .tagged:focus-within input,
+        html[data-theme=neon] #appRoot input[type=date]:focus {
+            border-color: #00e5ff !important;
+            box-shadow: 0 0 0 1px #00e5ff, 0 0 18px rgba(0,229,255,.7), 0 18px 30px -12px rgba(255,0,212,.6) !important;
+        }
+        html[data-theme=neon] #appRoot div:has(> label.block):focus-within > label.block { color: #ff4ae6; text-shadow: 0 0 8px rgba(255,0,212,.8); }
+        html[data-theme=neon] .tagged > i { color: #b9a6ff; }
+        html[data-theme=neon] .tagged:focus-within > i { color: #00e5ff; }
+        html[data-theme=neon] #msgPreview {
+            background: #000 !important; color: #39ff14 !important; border-color: rgba(57,255,20,.45) !important;
+            text-shadow: 0 0 6px rgba(57,255,20,.55); box-shadow: inset 0 0 22px rgba(57,255,20,.08), 0 0 14px rgba(57,255,20,.15) !important;
+        }
+        html[data-theme=neon] #shiftBtn {
+            background-image: linear-gradient(90deg,#ff00d4,#7c3aed,#00e5ff) !important;
+            box-shadow: 0 0 22px rgba(255,0,212,.55), 0 0 40px rgba(0,229,255,.25) !important;
+            text-shadow: 0 0 8px rgba(255,255,255,.8);
+        }
+        html[data-theme=neon] .bg-green-600 { background-color: #00c853 !important; box-shadow: 0 0 16px rgba(0,200,83,.6); }
+        html[data-theme=neon] .bg-slate-700 { background-color: #1a0b3d !important; box-shadow: inset 0 0 0 1px rgba(185,166,255,.4); }
+        html[data-theme=neon] .del-btn { box-shadow: 0 0 10px rgba(255,60,90,.35); border-color: rgba(255,60,90,.6); }
+
+        html[data-theme=neon] .side-menu, html[data-theme=neon] .bottom-sheet {
+            background: #0a0418; border-color: rgba(255,0,212,.5);
+            box-shadow: 0 0 30px rgba(255,0,212,.3);
+        }
+        html[data-theme=neon] .menu-item:hover { background: rgba(124,58,237,.18); }
+        html[data-theme=neon] .theme-picker { background: rgba(124,58,237,.18); }
+        html[data-theme=neon] .sheet-head { border-bottom-color: rgba(255,0,212,.3); }
+        html[data-theme=neon] .sheet-handle { background: #ff00d4; box-shadow: 0 0 10px #ff00d4; }
+        html[data-theme=neon] .check-row { background: rgba(124,58,237,.14); }
+        html[data-theme=neon] .date-chip { background: rgba(124,58,237,.18); border-color: rgba(185,166,255,.35); color: #e9e5ff; }
+        html[data-theme=neon] .date-chip.active { background: rgba(255,230,0,.14); color: #ffe600; border-color: #ffe600; box-shadow: 0 0 10px rgba(255,230,0,.45); }
+        html[data-theme=neon] .date-chip.today { color: #39ff14; border-color: #39ff14; box-shadow: 0 0 10px rgba(57,255,20,.4); background: rgba(57,255,20,.1); }
+        html[data-theme=neon] .view-banner { border-color: #ffe600; box-shadow: 0 0 18px rgba(255,230,0,.3); background: rgba(255,230,0,.07); }
+
+        html[data-theme=neon] #lockScreen {
+            background: radial-gradient(circle at 30% 15%, #3b0a6b 0%, #14042e 45%, #05010f 100%);
+        }
+        html[data-theme=neon] #lockTitle { text-shadow: 0 0 10px #ff00d4, 0 0 22px rgba(255,0,212,.7); }
+        html[data-theme=neon] .key { background: rgba(10,4,28,.6); box-shadow: inset 0 0 0 1px rgba(0,229,255,.45), 0 0 12px rgba(0,229,255,.18); }
+        html[data-theme=neon] .key:active { background: rgba(0,229,255,.2); box-shadow: inset 0 0 0 1px #00e5ff, 0 0 20px rgba(0,229,255,.6); }
+        html[data-theme=neon] .pin-dot { border-color: #00e5ff; box-shadow: 0 0 8px rgba(0,229,255,.6); }
+        html[data-theme=neon] .pin-dot.filled { background: #ff00d4; border-color: #ff00d4; box-shadow: 0 0 12px #ff00d4; }
+        html[data-theme=day] #lockScreen { background: radial-gradient(circle at 30% 20%, #93c5fd 0%, #6366f1 55%, #4f46e5 100%); }
+
+        /* ---------- Cloud sync ---------- */
+        .cloud-card { border-radius: 20px; padding: 14px; background: rgba(249,115,22,.08); border: 1px solid rgba(249,115,22,.28); }
+        .cs-off  { background: rgba(100,116,139,.2); color: #94a3b8; }
+        .cs-busy { background: rgba(59,130,246,.18); color: #60a5fa; }
+        .cs-ok   { background: rgba(16,185,129,.18); color: #34d399; }
+        .cs-err  { background: rgba(239,68,68,.18); color: #f87171; }
+        .cloud-dot { display: inline-block; width: 8px; height: 8px; border-radius: 99px; margin-left: 4px; vertical-align: middle; }
+        .cloud-dot.cs-off { background: #64748b; } .cloud-dot.cs-busy { background: #60a5fa; }
+        .cloud-dot.cs-ok { background: #34d399; box-shadow: 0 0 6px #34d399; } .cloud-dot.cs-err { background: #f87171; }
+        html[data-theme=day] .cloud-card { background: #fff7ed; border-color: #fed7aa; }
+        html[data-theme=day] .text-orange-300 { color: #ea580c !important; }
+        html[data-theme=neon] .cloud-card { border-color: #ff9100; box-shadow: 0 0 16px rgba(255,145,0,.3); }
+
+        html[data-theme=day] .text-yellow-50 { color: #713f12 !important; }
+        html[data-theme=day] .text-yellow-300, html[data-theme=day] .text-yellow-400 { color: #ca8a04 !important; }
+        html[data-theme=day] .text-emerald-100 { color: #065f46 !important; }
+        html[data-theme=day] .text-amber-300 { color: #b45309 !important; }
+    </style>
+</head>
+<body class="locked bg-slate-900 text-slate-100 min-h-screen p-3 sm:p-6 flex items-start sm:items-center justify-center">
+
+    <!-- ================= PIN LOCK SCREEN ================= -->
+    <div id="lockScreen" class="lock-fade fixed inset-0 z-[100] flex items-center justify-center p-4 overflow-y-auto">
+        <div class="w-full max-w-sm flex flex-col items-center text-white">
+
+            <!-- Animated Character -->
+            <svg id="lockChar" viewBox="0 0 220 260" class="w-44 h-48 sm:w-52 sm:h-56 drop-shadow-xl" aria-hidden="true">
+                <ellipse cx="105" cy="250" rx="62" ry="7" fill="rgba(0,0,0,.18)"/>
+                <!-- Briefcase -->
+                <g class="bag-bounce">
+                    <rect x="150" y="218" width="40" height="30" rx="5" fill="#7a3f1d"/>
+                    <rect x="150" y="218" width="40" height="9" rx="4" fill="#8f4c25"/>
+                    <path d="M162 218 v-6 h16 v6" fill="none" stroke="#5a2d12" stroke-width="3"/>
+                    <rect x="167" y="225" width="6" height="5" rx="1" fill="#e7b04a"/>
+                </g>
+                <g id="charBody" class="char-float">
+                    <!-- Legs -->
+                    <rect x="84" y="160" width="14" height="72" rx="6" fill="#1f2937"/>
+                    <rect x="104" y="160" width="14" height="72" rx="6" fill="#111827"/>
+                    <!-- Shoes -->
+                    <ellipse cx="89" cy="236" rx="13" ry="6" fill="#f8fafc"/>
+                    <ellipse cx="113" cy="236" rx="13" ry="6" fill="#e2e8f0"/>
+                    <!-- Jacket -->
+                    <path d="M72 108 q29 -14 58 0 l6 58 h-70 z" fill="#9ca3af"/>
+                    <path d="M92 104 l9 22 l9 -22 z" fill="#f8fafc"/>
+                    <path d="M101 126 v38" stroke="#6b7280" stroke-width="2"/>
+                    <!-- Left arm -->
+                    <rect x="62" y="110" width="13" height="50" rx="6" fill="#8b929c" transform="rotate(8 68 112)"/>
+                    <circle cx="62" cy="162" r="7" fill="#f1c7a3"/>
+                    <!-- Right arm (waving) -->
+                    <g class="char-arm">
+                        <rect x="124" y="108" width="13" height="46" rx="6" fill="#8b929c"/>
+                        <circle cx="131" cy="157" r="7" fill="#f1c7a3"/>
+                    </g>
+                    <!-- Head -->
+                    <g class="char-head">
+                        <rect x="95" y="90" width="12" height="14" fill="#e8b894"/>
+                        <ellipse cx="101" cy="72" rx="22" ry="25" fill="#f1c7a3"/>
+                        <path d="M79 66 q2 -26 26 -24 q20 2 19 24 q-6 -12 -22 -12 q-15 0 -23 12z" fill="#e3a83b"/>
+                        <path d="M82 80 q19 26 38 0 q-2 18 -19 20 q-17 -2 -19 -20z" fill="#d89b30"/>
+                        <ellipse class="char-eye" cx="93" cy="72" rx="2.5" ry="3" fill="#1f2937"/>
+                        <ellipse class="char-eye" cx="110" cy="72" rx="2.5" ry="3" fill="#1f2937"/>
+                        <path id="charMouth" d="M95 84 q6 4 12 0" stroke="#7c3a1e" stroke-width="2" fill="none" stroke-linecap="round"/>
+                    </g>
+                </g>
+            </svg>
+
+            <h2 id="lockTitle" class="text-xl font-bold mt-2">Welcome Back!</h2>
+            <p id="lockSub" class="text-sm text-indigo-100 mt-1 text-center">Apna 4 digit PIN dalein</p>
+
+            <!-- Naam wala step (har phone par pehli dafa) -->
+            <div id="nameStep" class="hidden w-full mt-6 space-y-3">
+                <div class="relative">
+                    <i class="fa-solid fa-user absolute left-4 top-1/2 -translate-y-1/2 text-indigo-200"></i>
+                    <input id="userNameInput" type="text" maxlength="30" autocomplete="name" placeholder="Apna naam likhein"
+                        class="w-full rounded-2xl bg-white/15 border border-white/25 pl-11 pr-4 py-3.5 text-white text-base font-semibold placeholder-indigo-200 outline-none focus:bg-white/25 focus:border-white transition">
+                </div>
+                <button onclick="saveUserName()" class="w-full rounded-2xl bg-white text-indigo-700 font-bold py-3.5 active:scale-[.98] transition">
+                    Aage <i class="fa-solid fa-arrow-right ml-1"></i>
+                </button>
+            </div>
+
+            <div id="pinStep" class="w-full flex flex-col items-center">
+            <div id="pinDots" class="pin-dots flex gap-4 my-5">
+                <span class="pin-dot"></span><span class="pin-dot"></span><span class="pin-dot"></span><span class="pin-dot"></span>
+            </div>
+            <p id="lockError" class="h-5 text-sm text-yellow-200 font-medium"></p>
+
+            <div class="grid grid-cols-3 gap-3 w-full mt-3" id="keypad">
+                <button class="key" data-k="1">1</button><button class="key" data-k="2">2</button><button class="key" data-k="3">3</button>
+                <button class="key" data-k="4">4</button><button class="key" data-k="5">5</button><button class="key" data-k="6">6</button>
+                <button class="key" data-k="7">7</button><button class="key" data-k="8">8</button><button class="key" data-k="9">9</button>
+                <button class="key !text-base" data-k="clear"><i class="fa-solid fa-xmark"></i></button>
+                <button class="key" data-k="0">0</button>
+                <button class="key !text-base" data-k="back"><i class="fa-solid fa-delete-left"></i></button>
+            </div>
+            </div><!-- /pinStep -->
+
+            <button id="forgotPinBtn" onclick="forgotPin()" class="mt-6 text-xs text-indigo-100 underline hidden">PIN bhool gaye?</button>
+
+            <div id="noStorageWarn" class="hidden mt-5 w-full rounded-2xl bg-amber-400/20 border border-amber-300/50 p-3 text-[12px] text-amber-50 leading-relaxed">
+                <b><i class="fa-solid fa-triangle-exclamation mr-1"></i>Data save nahi ho raha!</b><br>
+                Ye file jis app mein khuli hai (HTML Viewer / WhatsApp preview) woh data save nahi karne deti. App band karte hi sab mit jayega.
+                File ko <b>Chrome</b> mein kholein: file par lamba dabayein &#x2192; <b>Open with &#x2192; Chrome</b>.
+            </div>
+        </div>
+    </div>
+
+    <div id="appRoot" class="w-full flex justify-center">
+
+    <div class="w-full max-w-xl bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-emerald-600 to-teal-700 p-4 sm:p-5 text-white flex justify-between items-center">
+            <div>
+                <h1 class="text-lg sm:text-xl font-bold flex items-center gap-2">
+                    <i class="fa-brands fa-whatsapp text-2xl"></i> WhatsApp Sale Generator
+                </h1>
+                <p id="hdrGreeting" class="text-xs text-emerald-100 mt-0.5">Daily Sale Report &amp; MTD Tracker</p>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="lockApp()" title="Lock" class="hdr-btn"><i class="fa-solid fa-lock"></i></button>
+                <button onclick="cycleTheme()" title="Theme badlein" class="hdr-btn" id="themeQuickBtn"><i class="fa-solid fa-moon"></i></button>
+                <button onclick="openMenu()" title="Menu" class="hdr-btn"><i class="fa-solid fa-bars"></i></button>
+            </div>
+        </div>
+
+        <div id="mainForm" class="p-4 sm:p-6 space-y-4">
+            <!-- Purani date dekhte waqt banner -->
+            <div id="viewBanner" class="hidden view-banner">
+                <div class="flex items-start gap-3">
+                    <span class="w-10 h-10 rounded-xl bg-amber-400/20 text-amber-300 flex items-center justify-center flex-shrink-0"><i class="fa-solid fa-calendar-days"></i></span>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-bold text-amber-200">Purani Report: <span id="viewDateText"></span></p>
+                        <p id="viewNote" class="text-[11px] text-amber-100/80 mt-0.5">Sirf dekhne ke liye. Is mein kuch badla nahi jayega.</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2 mt-3">
+                    <button onclick="copyOnly()" class="text-xs font-bold bg-amber-400/20 text-amber-200 py-2.5 rounded-xl"><i class="fa-regular fa-copy mr-1"></i>Copy</button>
+                    <button onclick="exitViewMode(true)" class="text-xs font-bold bg-amber-400 text-amber-950 py-2.5 rounded-xl"><i class="fa-solid fa-arrow-rotate-left mr-1"></i>Aaj par wapas</button>
+                </div>
+            </div>
+
+            <!-- Basic Info -->
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">SR Name</label>
+                    <div class="tagged"><i class="fa-solid fa-user"></i><input type="text" id="srName" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:border-emerald-500" oninput="calculateAll()"></div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">City</label>
+                    <div class="tagged"><i class="fa-solid fa-location-dot"></i><input type="text" id="cityName" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:border-emerald-500" oninput="calculateAll()"></div>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Report Date</label>
+                <input type="date" id="reportDate" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:border-emerald-500" onchange="onReportDateChange()">
+                <div id="dateHint" class="flex flex-wrap gap-1.5 mt-2"></div>
+            </div>
+
+            <!-- Today Booking -->
+            <div class="border border-slate-700/60 rounded-xl p-3.5 bg-slate-950/45 space-y-3">
+                <span class="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1">
+                    <i class="fa-solid fa-cart-shopping"></i> Today Booking
+                </span>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Retail (Rs)</label>
+                        <div class="money"><input type="number" inputmode="numeric" id="todayRetail" placeholder="0" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:border-emerald-500 font-bold text-emerald-400" oninput="calculateAll()"></div>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">W/S (Rs)</label>
+                        <div class="money"><input type="number" inputmode="numeric" id="todayWs" placeholder="0" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:border-emerald-500 font-bold text-emerald-400" oninput="calculateAll()"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Focus Brands -->
+            <div class="border border-slate-700/60 rounded-xl p-3.5 bg-slate-950/45 space-y-3">
+                <div class="flex justify-between items-center">
+                    <span class="text-xs font-bold uppercase tracking-wider text-emerald-400">Focus Brands</span>
+                    <button onclick="addBrandRow('', '')" class="text-xs bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-300 border border-emerald-500/30 px-2.5 py-1 rounded-lg transition font-medium">
+                        <i class="fa-solid fa-plus mr-1"></i> Add Brand
+                    </button>
+                </div>
+                <div id="brandsContainer" class="space-y-2"></div>
+            </div>
+
+            <!-- Yesterday Booking = Today Execution -->
+            <div class="border border-amber-500/30 rounded-xl p-3.5 bg-amber-950/20 space-y-3">
+                <span class="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1">
+                    <i class="fa-solid fa-truck"></i> Yesterday Booking (= Today Execution)
+                </span>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Retail (Rs)</label>
+                        <div class="money"><input type="number" inputmode="numeric" id="yestRetail" placeholder="0" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-amber-300 font-bold focus:outline-none focus:border-amber-500" oninput="calculateAll()"></div>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">W/S (Rs)</label>
+                        <div class="money"><input type="number" inputmode="numeric" id="yestWs" placeholder="0" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-amber-300 font-bold focus:outline-none focus:border-amber-500" oninput="calculateAll()"></div>
+                    </div>
+                </div>
+                <p class="text-[10px] text-slate-400">Next Day Shift par aaj ki booking khud yahan aa jayegi.</p>
+            </div>
+
+            <!-- MTD -->
+            <div class="border border-teal-500/30 rounded-xl p-3.5 bg-teal-950/20 space-y-3">
+                <span class="text-xs font-bold uppercase tracking-wider text-teal-400 flex items-center gap-1">
+                    <i class="fa-solid fa-chart-line"></i> MTD Sale
+                </span>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Kal tak ki MTD</label>
+                        <div class="money"><input type="number" inputmode="numeric" id="prevMtd" placeholder="0" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-teal-300 font-bold focus:outline-none focus:border-teal-500" oninput="calculateAll()"></div>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">MTD in Msg (auto)</label>
+                        <div class="money"><input type="text" id="displayMtd" readonly class="w-full bg-slate-900/80 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-teal-300 font-bold cursor-not-allowed"></div>
+                    </div>
+                </div>
+                <p class="text-[10px] text-slate-400">MTD = Kal tak ki MTD + Today Execution. Mahine ke shuru mein "Kal tak ki MTD" 0 kar dein.</p>
+            </div>
+
+            <!-- Preview -->
+            <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">WhatsApp Message Preview</label>
+                <textarea id="msgPreview" rows="16" readonly class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3.5 text-xs sm:text-sm font-mono text-slate-200 focus:outline-none leading-relaxed"></textarea>
+            </div>
+
+            <!-- Actions -->
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="copyOnly()" class="bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 rounded-xl transition flex items-center justify-center gap-2 text-sm">
+                    <i class="fa-regular fa-copy"></i> Sirf Copy
+                </button>
+                <button onclick="shareWhatsApp()" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-xl transition flex items-center justify-center gap-2 text-sm">
+                    <i class="fa-brands fa-whatsapp text-lg"></i> WhatsApp
+                </button>
+            </div>
+            <button id="shiftBtn" onclick="copyAndAdvance()" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-emerald-900/30 transition flex items-center justify-center gap-2 text-sm sm:text-base">
+                <i class="fa-solid fa-forward"></i> Copy Message &amp; Next Day Shift
+            </button>
+        </div>
+    </div>
+
+
+    <!-- ================= SIDE MENU ================= -->
+    <div id="menuBackdrop" class="sheet-backdrop" onclick="closeMenu()"></div>
+    <aside id="sideMenu" class="side-menu">
+        <div class="p-5 bg-gradient-to-br from-emerald-600 to-teal-700">
+            <div class="flex justify-between items-start">
+                <div class="w-11 h-11 rounded-2xl bg-white/15 flex items-center justify-center"><i class="fa-brands fa-whatsapp text-2xl text-white"></i></div>
+                <button onclick="closeMenu()" class="text-white/80 hover:text-white w-9 h-9"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <p id="menuUser" class="text-white font-bold mt-3">Sale Generator</p>
+            <p id="menuSr" class="text-emerald-100 text-xs mt-0.5"></p>
+        </div>
+        <div class="px-4 pt-4">
+            <p class="menu-section-title">Theme</p>
+            <div class="theme-picker">
+                <button data-theme-btn="day" onclick="setTheme('day')"><i class="fa-solid fa-sun"></i><span>Day</span></button>
+                <button data-theme-btn="night" onclick="setTheme('night')"><i class="fa-solid fa-moon"></i><span>Night</span></button>
+                <button data-theme-btn="neon" onclick="setTheme('neon')"><i class="fa-solid fa-bolt"></i><span>Neon</span></button>
+            </div>
+        </div>
+        <nav class="p-3 space-y-1.5">
+            <button class="menu-item" onclick="closeMenu(); openSheet('formatSheet')">
+                <span class="mi-icon bg-blue-500/15 text-blue-300"><i class="fa-solid fa-message"></i></span>
+                <span class="flex-1 text-left"><b>Message Format</b><small>Apna message paste karke format banayein</small></span>
+                <i class="fa-solid fa-chevron-right text-slate-500 text-xs"></i>
+            </button>
+            <button class="menu-item" onclick="closeMenu(); openSheet('openingSheet')">
+                <span class="mi-icon bg-purple-500/15 text-purple-300"><i class="fa-solid fa-flag-checkered"></i></span>
+                <span class="flex-1 text-left"><b>Opening Setup</b><small>Pichli report se shuru karein</small></span>
+                <i class="fa-solid fa-chevron-right text-slate-500 text-xs"></i>
+            </button>
+            <button id="installMenuItem" class="menu-item hidden" onclick="closeMenu(); installApp()">
+                <span class="mi-icon bg-emerald-500/15 text-emerald-300"><i class="fa-solid fa-download"></i></span>
+                <span class="flex-1 text-left"><b>App Install Karein</b><small>Home screen par app ki tarah</small></span>
+            </button>
+            <button class="menu-item" onclick="closeMenu(); openSheet('cloudSheet')">
+                <span class="mi-icon bg-orange-500/15 text-orange-300"><i class="fa-solid fa-cloud"></i></span>
+                <span class="flex-1 text-left"><b>Cloud Sync <span id="cloudDot" class="cloud-dot"></span></b><small id="cloudMenuStatus">Firebase se jorein</small></span>
+                <i class="fa-solid fa-chevron-right text-slate-500 text-xs"></i>
+            </button>
+            <button class="menu-item" onclick="closeMenu(); openHistoryModal()">
+                <span class="mi-icon bg-emerald-500/15 text-emerald-300"><i class="fa-solid fa-clock-rotate-left"></i></span>
+                <span class="flex-1 text-left"><b>History</b><small>Purani reports dekhein / copy karein</small></span>
+                <i class="fa-solid fa-chevron-right text-slate-500 text-xs"></i>
+            </button>
+            <div class="h-px bg-slate-700/70 my-2"></div>
+            <button class="menu-item" onclick="closeMenu(); openSheet('malikSheet')">
+                <span class="mi-icon bg-yellow-500/15 text-yellow-300"><i class="fa-solid fa-user-shield"></i></span>
+                <span class="flex-1 text-left"><b>Malik Setup</b><small id="malikMenuStatus">Malik Code &amp; GitHub settings</small></span>
+                <i class="fa-solid fa-chevron-right text-slate-500 text-xs"></i>
+            </button>
+            <button class="menu-item" onclick="closeMenu(); changeUserName()">
+                <span class="mi-icon bg-sky-500/15 text-sky-300"><i class="fa-solid fa-user-pen"></i></span>
+                <span class="flex-1 text-left"><b>Apna Naam Badlein</b><small>Login par yahi naam aata hai</small></span>
+            </button>
+            <button class="menu-item" onclick="closeMenu(); lockApp()">
+                <span class="mi-icon bg-slate-500/20 text-slate-300"><i class="fa-solid fa-lock"></i></span>
+                <span class="flex-1 text-left"><b>Lock App</b><small>PIN ke peeche band karein</small></span>
+            </button>
+            <button class="menu-item danger" onclick="closeMenu(); resetData()">
+                <span class="mi-icon bg-red-500/15 text-red-400"><i class="fa-solid fa-rotate-right"></i></span>
+                <span class="flex-1 text-left"><b>Reset Data</b><small>Aaj ka data saaf (History safe)</small></span>
+            </button>
+        </nav>
+    </aside>
+
+    <!-- ================= FORMAT SHEET ================= -->
+    <div id="formatSheetBackdrop" class="sheet-backdrop" onclick="closeSheet('formatSheet')"></div>
+    <section id="formatSheet" class="bottom-sheet">
+        <div class="sheet-handle"></div>
+        <div class="sheet-head">
+            <h3><i class="fa-solid fa-message text-blue-400"></i> Message Format</h3>
+            <button onclick="closeSheet('formatSheet')"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="sheet-body space-y-4">
+            <div class="rounded-2xl bg-blue-500/10 border border-blue-500/25 p-3.5 text-[12px] text-blue-100 leading-relaxed">
+                <b>Asaan tareeqa:</b> WhatsApp se apna koi bhi purana report message copy karein, neeche paste karein aur <b>"Format Banayein"</b> dabayein. App khud samajh lega kaunsi line mein kya hai.
+            </div>
+            <div>
+                <div class="flex justify-between items-center mb-1.5">
+                    <label class="text-xs font-semibold uppercase tracking-wider text-slate-400">Apna Message Paste Karein</label>
+                    <button onclick="pasteFromClipboard('pasteMsg')" class="text-[11px] text-blue-300 font-semibold"><i class="fa-regular fa-paste mr-1"></i>Paste</button>
+                </div>
+                <textarea id="pasteMsg" rows="9" class="field-area" placeholder="SR = AFTAB AHMAD&#10;City = D I khan&#10;DATE=22/10/26&#10;*TodayBooking*12420&#10;Retail...12420&#10;..."></textarea>
+            </div>
+            <div class="space-y-2">
+                <label class="check-row"><input type="checkbox" id="fmtUpdateBrands" checked> Brands ke naam bhi isi message se le lo</label>
+                <label class="check-row"><input type="checkbox" id="fmtUpdateSr" checked> SR Name aur City bhi update karo</label>
+            </div>
+            <button onclick="buildFormatFromPaste()" class="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold py-3.5 rounded-2xl shadow-lg shadow-blue-900/40 flex items-center justify-center gap-2 active:scale-[.98] transition">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> Format Banayein
+            </button>
+
+            <div id="fmtResult" class="hidden rounded-2xl bg-slate-900/70 border border-slate-700 p-3.5">
+                <p class="text-xs font-bold text-slate-300 mb-2">App ne ye cheezein pehchani:</p>
+                <div id="fmtChips" class="flex flex-wrap gap-1.5"></div>
+            </div>
+
+            <details class="rounded-2xl border border-slate-700 bg-slate-900/40">
+                <summary class="p-3.5 text-xs font-bold uppercase tracking-wider text-slate-400 cursor-pointer">Advanced: Template khud edit karein</summary>
+                <div class="px-3.5 pb-3.5 space-y-2">
+                    <textarea id="msgTemplate" rows="12" class="field-area font-mono text-xs" oninput="calculateAll()"></textarea>
+                    <div class="flex justify-between items-center">
+                        <p class="text-[10px] text-slate-500">Tags: {sr} {city} {date} {todayBooking} {retailBooking} {wsBooking} {brandsList} {yestBooking} {execTotal} {execRetail} {execWs} {mtdSale}</p>
+                    </div>
+                    <button onclick="resetTemplate()" class="text-xs text-slate-300 bg-slate-700/70 px-3 py-2 rounded-xl"><i class="fa-solid fa-rotate-left mr-1"></i>Default Format wapas</button>
+                </div>
+            </details>
+        </div>
+    </section>
+
+    <!-- ================= CLOUD SHEET ================= -->
+    <div id="cloudSheetBackdrop" class="sheet-backdrop" onclick="closeSheet('cloudSheet')"></div>
+    <section id="cloudSheet" class="bottom-sheet">
+        <div class="sheet-handle"></div>
+        <div class="sheet-head">
+            <h3><i class="fa-solid fa-cloud text-orange-400"></i> Cloud Sync (Firebase)</h3>
+            <button onclick="closeSheet('cloudSheet')"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="sheet-body space-y-4">
+            <div id="cloudStatusCard" class="cloud-card">
+                <div class="flex items-center gap-3">
+                    <span id="cloudStatusIcon" class="w-11 h-11 rounded-2xl flex items-center justify-center text-lg"><i class="fa-solid fa-cloud"></i></span>
+                    <div class="flex-1 min-w-0">
+                        <p id="cloudStatusTitle" class="font-bold text-sm">Jura hua nahi</p>
+                        <p id="cloudStatusSub" class="text-[11px] text-slate-400 mt-0.5">Neeche Firebase config paste karein</p>
+                    </div>
+                </div>
+                <button id="cloudSyncBtn" onclick="cloudSyncNow(true)" class="w-full mt-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold py-3 rounded-2xl flex items-center justify-center gap-2 active:scale-[.98] transition">
+                    <i class="fa-solid fa-rotate"></i> Abhi Sync Karein
+                </button>
+            </div>
+
+            <div class="rounded-2xl bg-slate-900/70 border border-slate-700 p-3.5 text-[12px] text-slate-300 leading-relaxed space-y-1.5">
+                <p><i class="fa-solid fa-key text-orange-300 mr-1"></i> Aapka <b>naam + PIN</b> hi cloud ki chaabi hai.</p>
+                <p><i class="fa-solid fa-mobile-screen text-orange-300 mr-1"></i> Naye phone par <b>bilkul wahi naam aur PIN</b> dalein, data khud wapas aa jayega.</p>
+                <p><i class="fa-solid fa-wifi text-orange-300 mr-1"></i> Internet na ho to app normal chalta hai, net aate hi sync ho jata hai.</p>
+            </div>
+
+            <div id="cfgBakedNote" class="hidden rounded-2xl bg-emerald-500/10 border border-emerald-500/30 p-3.5 text-[12px] text-emerald-100">
+                <i class="fa-solid fa-lock mr-1"></i> Firebase config file ke andar laga hua hai. Kuch paste karne ki zaroorat nahi.
+            </div>
+            <div id="cfgPasteBox">
+                <div class="flex justify-between items-center mb-1.5">
+                    <label class="text-xs font-semibold uppercase tracking-wider text-slate-400">Firebase Config</label>
+                    <button onclick="pasteFromClipboard('fbConfigInput')" class="text-[11px] text-orange-300 font-semibold"><i class="fa-regular fa-paste mr-1"></i>Paste</button>
+                </div>
+                <textarea id="fbConfigInput" rows="7" class="field-area font-mono text-xs" placeholder="const firebaseConfig = {&#10;  apiKey: &quot;...&quot;,&#10;  authDomain: &quot;...&quot;,&#10;  projectId: &quot;...&quot;,&#10;  ...&#10;};"></textarea>
+                <div class="grid grid-cols-2 gap-2 mt-2">
+                    <button onclick="saveFirebaseConfig()" class="text-xs font-bold bg-orange-500 text-white py-2.5 rounded-xl"><i class="fa-solid fa-plug mr-1"></i>Save &amp; Connect</button>
+                    <button onclick="removeFirebaseConfig()" class="text-xs font-semibold bg-slate-700/70 text-slate-200 py-2.5 rounded-xl"><i class="fa-solid fa-link-slash mr-1"></i>Disconnect</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= MALIK SETUP SHEET ================= -->
+    <div id="malikSheetBackdrop" class="sheet-backdrop" onclick="closeSheet('malikSheet')"></div>
+    <section id="malikSheet" class="bottom-sheet">
+        <div class="sheet-handle"></div>
+        <div class="sheet-head">
+            <h3><i class="fa-solid fa-user-shield text-yellow-400"></i> Malik Setup</h3>
+            <button onclick="closeSheet('malikSheet')"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="sheet-body space-y-4">
+            <div class="rounded-2xl bg-yellow-500/10 border border-yellow-500/30 p-3.5 text-[12px] text-yellow-50 leading-relaxed">
+                <b>Malik Code kya hai?</b> Agar koi SR apna PIN bhool jaye, to aap ye code daal kar uska <b>naya PIN</b> banwa sakte hain. Uska data aur history <b>nahi mitegi</b>.
+                <br>Ye setup sirf aap (malik) ek dafa karein, SR ko na dikhayein.
+            </div>
+
+            <div id="malikActiveCard" class="hidden rounded-2xl bg-emerald-500/10 border border-emerald-500/30 p-3.5 text-[12px] text-emerald-100">
+                <i class="fa-solid fa-circle-check mr-1"></i> <b>Malik Code file mein laga hua hai.</b> Sab phones par "PIN bhool gaye?" ab Malik Code maangega.
+            </div>
+
+            <div class="field">
+                <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Naya Malik Code (kam az kam 6, letters + numbers behtar)</label>
+                <div class="tagged"><i class="fa-solid fa-key"></i><input type="password" id="malikCode1" autocomplete="new-password" placeholder="Jaise: qadir2026"></div>
+            </div>
+            <div class="field">
+                <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Malik Code dobara</label>
+                <div class="tagged"><i class="fa-solid fa-key"></i><input type="password" id="malikCode2" autocomplete="new-password" placeholder="Wahi code dobara"></div>
+            </div>
+            <button onclick="buildMalikSettings()" class="w-full bg-gradient-to-r from-yellow-500 to-amber-600 text-white font-bold py-3.5 rounded-2xl flex items-center justify-center gap-2 active:scale-[.98] transition">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> Settings Lines Banayein
+            </button>
+
+            <div id="malikOutBox" class="hidden space-y-2">
+                <label class="text-xs font-semibold uppercase tracking-wider text-slate-400">Ye 2 lines copy karein</label>
+                <textarea id="malikOut" rows="5" readonly class="field-area font-mono text-[11px]"></textarea>
+                <button onclick="copyMalikLines()" class="w-full text-sm font-bold bg-emerald-600 text-white py-3 rounded-2xl"><i class="fa-regular fa-copy mr-1"></i>Copy Lines</button>
+                <div class="rounded-2xl bg-slate-900/70 border border-slate-700 p-3.5 text-[12px] text-slate-300 leading-relaxed">
+                    <b>Ab GitHub par:</b><br>
+                    1. Apni repo mein <b>index.html</b> kholein &#x2192; &#x270f;&#xfe0f; (Edit) dabayein.<br>
+                    2. <b>Ctrl+F</b> se <code>MALIK SETTINGS</code> dhoondein.<br>
+                    3. Neeche ki 2 lines (<code>const FIREBASE_CONFIG_ENC</code> aur <code>const MALIK_CODE_HASH</code>) mita kar ye copy ki hui lines paste karein.<br>
+                    4. <b>Commit changes</b> dabayein. 1-2 minute mein sab phones par lag jayega.
+                </div>
+                <p id="malikNoCfgNote" class="hidden text-[11px] text-amber-300"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Is phone par Firebase config nahi mila, is liye config khali rahegi. Pehle Menu &#x2192; Cloud Sync mein config jorein, phir dobara banayein.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= OPENING SHEET ================= -->
+    <div id="openingSheetBackdrop" class="sheet-backdrop" onclick="closeSheet('openingSheet')"></div>
+    <section id="openingSheet" class="bottom-sheet">
+        <div class="sheet-handle"></div>
+        <div class="sheet-head">
+            <h3><i class="fa-solid fa-flag-checkered text-purple-400"></i> Opening Setup</h3>
+            <button onclick="closeSheet('openingSheet')"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="sheet-body space-y-4" id="openingCardBody">
+            <div class="rounded-2xl bg-purple-500/10 border border-purple-500/25 p-3.5 space-y-2.5">
+                <p class="text-[12px] text-purple-100 leading-relaxed"><b>Sab se asaan:</b> aakhri bheja hua report message paste karein, sab khud bhar jayega.</p>
+                <textarea id="openPasteMsg" rows="4" class="field-area" placeholder="Pichla WhatsApp message yahan paste karein..."></textarea>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="pasteFromClipboard('openPasteMsg')" class="text-xs font-semibold bg-slate-800 text-purple-200 py-2.5 rounded-xl"><i class="fa-regular fa-paste mr-1"></i>Paste</button>
+                    <button onclick="openingFromPaste()" class="text-xs font-bold bg-purple-600 text-white py-2.5 rounded-xl"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i>Auto Fill</button>
+                </div>
+            </div>
+            <p class="text-center text-[11px] text-slate-500">&#x2014; ya khud likhein &#x2014;</p>
+            <div class="field">
+                <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Pichli Report ki Date</label>
+                <input type="date" id="openDate">
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div class="field">
+                    <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Us din ki Booking Retail</label>
+                    <div class="money"><input type="number" inputmode="numeric" id="openRetail" placeholder="0"></div>
+                </div>
+                <div class="field">
+                    <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Us din ki Booking W/S</label>
+                    <div class="money"><input type="number" inputmode="numeric" id="openWs" placeholder="0"></div>
+                </div>
+            </div>
+            <div class="field">
+                <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Us report ki MTD Sale</label>
+                <div class="money"><input type="number" inputmode="numeric" id="openMtd" placeholder="0"></div>
+            </div>
+            <label class="check-row"><input type="checkbox" id="openNewMonth"> Aaj se naya mahina shuru hai (MTD 0 se)</label>
+            <button onclick="applyOpening()" class="w-full bg-gradient-to-r from-purple-500 to-fuchsia-600 text-white font-bold py-3.5 rounded-2xl shadow-lg shadow-purple-900/40 flex items-center justify-center gap-2 active:scale-[.98] transition">
+                <i class="fa-solid fa-check"></i> Apply Opening
+            </button>
+            <p class="text-[11px] text-slate-400 leading-relaxed">Example: 22/10/26 ki report &#x2192; Booking 12420, MTD 489210. Apply karne par 23/10/26 ka din ready ho jayega (Yesterday 12420, MTD = 489210 + 12420).</p>
+        </div>
+    </section>
+
+    </div><!-- /appRoot -->
+
+    <!-- History Modal -->
+    <div id="historyModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+            <div class="bg-gradient-to-r from-slate-700 to-slate-800 p-4 border-b border-slate-700 flex justify-between items-center">
+                <h3 class="font-bold text-sm text-white flex items-center gap-2">
+                    <i class="fa-solid fa-clock-rotate-left text-emerald-400"></i> Previous Reports
+                </h3>
+                <button onclick="closeHistoryModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div id="historyList" class="p-4 overflow-y-auto space-y-3 flex-1 text-xs font-mono"></div>
+            <div class="p-3 bg-slate-900 border-t border-slate-700 flex justify-between">
+                <button onclick="undoLastShift()" class="text-xs bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 px-3 py-1.5 rounded-lg transition font-medium"><i class="fa-solid fa-rotate-left mr-1"></i>Undo Last Shift</button>
+                <button onclick="clearHistory()" class="text-xs bg-red-500/20 text-red-400 hover:bg-red-500/30 px-3 py-1.5 rounded-lg transition font-medium">Clear History</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 bg-emerald-600 text-white px-4 py-2.5 rounded-xl shadow-xl text-sm font-medium translate-y-20 opacity-0 transition-all duration-300 flex items-center gap-2 z-[95] pointer-events-none">
+        <i class="fa-solid fa-circle-check"></i> <span id="toastText"></span>
+    </div>
+
+    <script>
+        // ---------- Storage na ho to bhi app chale ----------
+        // Kuch viewers (file manager ka HTML Viewer, WhatsApp preview) data save nahi karne dete.
+        // Wahan memory mein rakh kar app chalate hain taa ke naam/PIN par atak na jaye.
+        (function ensureStorage() {
+            function works(st) {
+                try { const k = '__wa_test'; st.setItem(k, '1'); const ok = st.getItem(k) === '1'; st.removeItem(k); return ok; }
+                catch (e) { return false; }
+            }
+            function memStore() {
+                const m = {};
+                return {
+                    getItem: k => (Object.prototype.hasOwnProperty.call(m, k) ? m[k] : null),
+                    setItem: (k, v) => { m[k] = String(v); },
+                    removeItem: k => { delete m[k]; },
+                    clear: () => { Object.keys(m).forEach(k => delete m[k]); },
+                    key: i => Object.keys(m)[i] ?? null,
+                    get length() { return Object.keys(m).length; }
+                };
+            }
+            ['localStorage', 'sessionStorage'].forEach(name => {
+                let ok = false;
+                try { ok = !!window[name] && works(window[name]); } catch (e) {}
+                if (ok) return;
+                const shim = memStore();
+                try { Object.defineProperty(window, name, { value: shim, configurable: true, writable: true }); } catch (e) {}
+                try { if (window[name] !== shim) window[name] = shim; } catch (e) {}
+                if (name === 'localStorage') window.__noStorage = true;
+            });
+        })();
+
+        // ======================= MALIK SETTINGS =======================
+        // Menu \u2192 "Malik Setup" in dono lines ko khud bana deta hai.
+        // GitHub par index.html edit karke sirf ye 2 lines badalni hain.
+        const FIREBASE_CONFIG_ENC = 'DENMAwgnAEMYXEF7c01SYkA2URsLBzlcQlJXNAprYXtoekY3QyomOlxRcRwseAtaaXAbW0NMBhUEIVVXBwpUGA0RQlgbBAAeBB8WW10DEBRcXkFUWxYSSBIRHEtZVQtBFhhHQV5TEgJZOgVOXxhJBw9fF1pWQkoWBkgAQ0BHSU4JEVtdUnFEWhwEWVFbThZbVgNOV19EQFBeEhIDFQgeAFhbFQZJTlhBUF4ST0wDEU5JGFcDEElbUFpfXiQEQxcEHixeGFxBDQsPBQQOQlQYQ1hZRxYYBxNKc1MRCxtGWxpCWVpQDQ9TVgoDAglGXBVbHkFWCAcNCV5UWQ8GAwFdQABOFVYIVxhH';
+        const MALIK_CODE_HASH = '8578fbc5d816833741447a42823313bf31f94afcfe3b56b439b9e43a4c458582';
+        // ==============================================================
+
+        // Config code ki shakal mein rakha hai taa ke file mein seedha nazar na aaye
+        const CFG_MASK = 'wa-sale::fc::7319';
+        function encodeCfg(obj) {
+            const str = JSON.stringify(obj);
+            let out = '';
+            for (let i = 0; i < str.length; i++) out += String.fromCharCode(str.charCodeAt(i) ^ CFG_MASK.charCodeAt(i % CFG_MASK.length));
+            return btoa(out);
+        }
+        function decodeCfg(enc) {
+            if (!enc) return null;
+            try {
+                const bin = atob(enc);
+                let str = '';
+                for (let i = 0; i < bin.length; i++) str += String.fromCharCode(bin.charCodeAt(i) ^ CFG_MASK.charCodeAt(i % CFG_MASK.length));
+                const c = JSON.parse(str);
+                return c && c.apiKey && c.projectId ? c : null;
+            } catch (e) { return null; }
+        }
+        const FIREBASE_CONFIG = decodeCfg(FIREBASE_CONFIG_ENC);
+        const STORAGE_KEY = 'wa_sale_state_v3';
+        const HISTORY_KEY = 'wa_sale_history_v3';
+        const UNDO_KEY = 'wa_sale_undo_v3';
+
+        const defaultTemplate =
+`SR = {sr}
+City = {city}
+DATE={date}
+*TodayBooking*{todayBooking}
+Retail...{retailBooking}
+w/s..{wsBooking}
+
+Focus Brand,s
+
+{brandsList}
+
+*Yesterday Booking:*{yestBooking}
+
+*Toda Execution:*{execTotal}
+Retail.{execRetail}
+W/s.{execWs}
+
+*MTD Sale*{mtdSale}`;
+
+        const DEFAULT_BRAND_FMT = '*{name}*{amount}';
+
+        const defaultState = {
+            srName: 'AFTAB AHMAD',
+            cityName: 'D I khan',
+            reportDate: '',
+            todayRetail: '',
+            todayWs: '',
+            yestRetail: '',
+            yestWs: '',
+            prevMtd: '',
+            msgTemplate: defaultTemplate,
+            brandFmt: DEFAULT_BRAND_FMT,
+            brands: [
+                { name: 'Shahi Elichi', amount: '' },
+                { name: 'BB RS20', amount: '' },
+                { name: 'SN Rs50 & Rs100.', amount: '' }
+            ]
+        };
+
+        // ---------- Helpers ----------
+        const $ = id => document.getElementById(id);
+        const num = v => parseFloat(v) || 0;
+        // 0 ho to khali chhor do (jaise format mein "w/s.." khali hai)
+        const blankZero = n => (n ? String(n) : '');
+
+        function localDateStr(d) {
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        }
+        function formatDate(raw) {
+            const p = (raw || '').split('-');
+            return p.length === 3 ? `${p[2]}/${p[1]}/${p[0].slice(2)}` : raw;
+        }
+        function nextDate(raw) {
+            const p = (raw || '').split('-').map(Number);
+            if (p.length !== 3 || p.some(isNaN)) return localDateStr(new Date());
+            const d = new Date(p[0], p[1] - 1, p[2]);
+            d.setDate(d.getDate() + 1);
+            return localDateStr(d);
+        }
+        function readJSON(key, fallback) {
+            try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
+            catch (e) { return fallback; }
+        }
+        function writeJSON(key, val) {
+            const str = JSON.stringify(val);
+            let prev = null;
+            try { prev = localStorage.getItem(key); localStorage.setItem(key, str); } catch (e) {}
+            // Data badla to cloud par bhejne ki baari lagao (pehli dafa wala default save nahi ginte)
+            if ((key === STORAGE_KEY || key === HISTORY_KEY) && prev !== null && prev !== str) onLocalDataChanged();
+        }
+
+        // ---------- Load / Save ----------
+        let brandFmt = DEFAULT_BRAND_FMT;
+
+        function applyState(s) {
+            $('srName').value = s.srName ?? defaultState.srName;
+            $('cityName').value = s.cityName ?? defaultState.cityName;
+            $('reportDate').value = s.reportDate || localDateStr(new Date());
+            $('todayRetail').value = s.todayRetail ?? '';
+            $('todayWs').value = s.todayWs ?? '';
+            $('yestRetail').value = s.yestRetail ?? '';
+            $('yestWs').value = s.yestWs ?? '';
+            $('prevMtd').value = s.prevMtd ?? '';
+            $('msgTemplate').value = s.msgTemplate || defaultTemplate;
+            brandFmt = s.brandFmt || DEFAULT_BRAND_FMT;
+            renderBrands(s.brands && s.brands.length ? s.brands : defaultState.brands);
+            calculateAll();
+        }
+
+        function getState() {
+            return {
+                srName: $('srName').value,
+                cityName: $('cityName').value,
+                reportDate: $('reportDate').value,
+                todayRetail: $('todayRetail').value,
+                todayWs: $('todayWs').value,
+                yestRetail: $('yestRetail').value,
+                yestWs: $('yestWs').value,
+                prevMtd: $('prevMtd').value,
+                msgTemplate: $('msgTemplate').value,
+                brandFmt: brandFmt,
+                brands: getBrandsArray(true)
+            };
+        }
+
+        function saveStateToStorage() {
+            if (viewMode) return;
+            writeJSON(STORAGE_KEY, getState());
+        }
+
+        function loadData() {
+            const saved = readJSON(STORAGE_KEY, null);
+            applyState(saved || defaultState);
+            // Pehli dafa khulne par Opening Setup khud khul jaye
+            if (!saved) openSheet('openingSheet');
+        }
+
+        // ---------- Brands ----------
+        function renderBrands(brands) {
+            $('brandsContainer').innerHTML = '';
+            brands.forEach(b => addBrandRow(b.name, b.amount, true));
+        }
+
+        function addBrandRow(name, amount, silent) {
+            const div = document.createElement('div');
+            div.className = 'brand-row flex gap-2 items-center';
+            div.innerHTML = `
+                <div class="tagged flex-[11] min-w-0"><i class="fa-solid fa-tag"></i><input type="text" placeholder="Brand Name" class="brand-name w-full"></div>
+                <div class="money flex-[10] min-w-0"><input type="number" inputmode="numeric" placeholder="0" class="brand-amount w-full"></div>
+                <button type="button" class="del-btn"><i class="fa-solid fa-trash-can"></i></button>`;
+            // value property se set karte hain taa ke " ya < wale naam se kuch na toote
+            div.querySelector('.brand-name').value = name || '';
+            div.querySelector('.brand-amount').value = amount ?? '';
+            div.querySelectorAll('input').forEach(i => i.addEventListener('input', calculateAll));
+            div.querySelector('button').addEventListener('click', () => { div.remove(); calculateAll(); });
+            $('brandsContainer').appendChild(div);
+            if (!silent) { calculateAll(); div.querySelector('.brand-name').focus(); }
+        }
+
+        function getBrandsArray(keepEmpty) {
+            const brands = [];
+            document.querySelectorAll('#brandsContainer > div').forEach(r => {
+                const name = r.querySelector('.brand-name').value.trim();
+                const amount = r.querySelector('.brand-amount').value;
+                if (name || keepEmpty) brands.push({ name, amount });
+            });
+            return brands;
+        }
+
+        // ---------- Calculation ----------
+        function calculateAll() {
+            if (viewMode) return $('msgPreview').value;
+            const todayRetail = num($('todayRetail').value);
+            const todayWs = num($('todayWs').value);
+            const todayBooking = todayRetail + todayWs;
+
+            const yestRetail = num($('yestRetail').value);
+            const yestWs = num($('yestWs').value);
+            const yestBooking = yestRetail + yestWs;   // kal ki booking = aaj ki execution
+
+            const mtdSale = num($('prevMtd').value) + yestBooking;
+            $('displayMtd').value = mtdSale;
+
+            const brandsText = getBrandsArray(false)
+                .map(b => brandFmt.split('{name}').join(b.name).split('{amount}').join(blankZero(num(b.amount))))
+                .join('\n');
+
+            const values = {
+                sr: $('srName').value,
+                city: $('cityName').value,
+                date: formatDate($('reportDate').value),
+                todayBooking: todayBooking,
+                retailBooking: blankZero(todayRetail),
+                wsBooking: blankZero(todayWs),
+                brandsList: brandsText,
+                yestBooking: yestBooking,
+                execTotal: yestBooking,
+                execRetail: blankZero(yestRetail),
+                execWs: blankZero(yestWs),
+                yestRetail: blankZero(yestRetail),   // purane template ke liye
+                yestWs: blankZero(yestWs),
+                mtdSale: mtdSale
+            };
+
+            const template = $('msgTemplate').value || defaultTemplate;
+            const msg = template.replace(/\{(\w+)\}/g, (m, key) =>
+                Object.prototype.hasOwnProperty.call(values, key) ? String(values[key]) : m);
+
+            $('msgPreview').value = msg;
+            saveStateToStorage();
+            return msg;
+        }
+
+        // ---------- Copy / Share ----------
+        async function copyText(text) {
+            try {
+                await navigator.clipboard.writeText(text);
+                return true;
+            } catch (e) {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                ta.style.position = 'fixed';
+                ta.style.opacity = '0';
+                document.body.appendChild(ta);
+                ta.select();
+                let ok = false;
+                try { ok = document.execCommand('copy'); } catch (err) {}
+                ta.remove();
+                return ok;
+            }
+        }
+
+        async function copyOnly() {
+            const ok = await copyText(calculateAll());
+            showToast(ok ? 'Message copy ho gaya!' : 'Copy nahi hua, preview se manually copy karein', !ok);
+        }
+
+        function shareWhatsApp() {
+            const msg = calculateAll();
+            window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
+        }
+
+        async function copyAndAdvance() {
+            if (viewMode) { showToast('Ye purani report hai. Pehle "Aaj par wapas" dabayein', true); return; }
+            const todayBooking = num($('todayRetail').value) + num($('todayWs').value);
+            if (!todayBooking && !confirm('Aaj ki booking 0 hai. Phir bhi agle din par shift karein?')) return;
+
+            const msg = calculateAll();
+            const ok = await copyText(msg);
+
+            const current = getState();
+            writeJSON(UNDO_KEY, current);
+
+            // History mein save
+            saveHistoryEntry({
+                date: current.reportDate,
+                savedAt: new Date().toLocaleString(),
+                msg: msg,
+                state: current
+            });
+
+            // Next day shift:
+            // aaj ki booking -> kal ki booking, MTD aage, date +1, aaj ke fields khali
+            const execToday = num(current.yestRetail) + num(current.yestWs);
+            const next = Object.assign({}, current, {
+                reportDate: nextDate(current.reportDate),
+                prevMtd: String(num(current.prevMtd) + execToday),
+                yestRetail: current.todayRetail,
+                yestWs: current.todayWs,
+                todayRetail: '',
+                todayWs: '',
+                brands: current.brands.map(b => ({ name: b.name, amount: '' }))
+            });
+            applyState(next);
+
+            showToast(ok ? 'Copy ho gaya & agla din ready!' : 'History mein save, lekin copy nahi hua', !ok);
+        }
+
+        function undoLastShift() {
+            const prev = readJSON(UNDO_KEY, null);
+            if (!prev) { showToast('Undo ke liye kuch nahi', true); return; }
+            if (!confirm('Pichla din wapas laayein?')) return;
+            applyState(prev);
+            const history = readJSON(HISTORY_KEY, []);
+            if (history.length && history[0].date === prev.reportDate) history.shift();
+            writeJSON(HISTORY_KEY, history);
+            try { localStorage.removeItem(UNDO_KEY); } catch (e) {}
+            renderHistory();
+            showToast('Pichla din wapas aa gaya');
+        }
+
+
+        // ---------- Purani Date ki Entries ----------
+        let viewMode = false;
+        let liveState = null;
+
+        function saveHistoryEntry(entry) {
+            const history = readJSON(HISTORY_KEY, []).filter(h => h.date !== entry.date);
+            history.push(entry);
+            history.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+            writeJSON(HISTORY_KEY, history.slice(0, 200));
+            renderDateHint();
+        }
+        function findHistory(date) {
+            return readJSON(HISTORY_KEY, []).find(h => h.date === date) || null;
+        }
+
+        // Purani entry (bina state ke) ko message se wapas fields mein badlo
+        function stateFromMessage(entry, base) {
+            const r = parseReportMessage(entry.msg);
+            const v = r.values;
+            const execTotal = v.execTotal ?? v.yestBooking ?? 0;
+            const execRetail = v.execRetail ?? (v.execWs === undefined ? execTotal : execTotal - (v.execWs || 0));
+            return Object.assign({}, base, {
+                srName: v.sr || base.srName,
+                cityName: v.city || base.cityName,
+                reportDate: entry.date,
+                todayRetail: String(v.retailBooking ?? v.todayBooking ?? ''),
+                todayWs: v.wsBooking ? String(v.wsBooking) : '',
+                yestRetail: execRetail ? String(execRetail) : '',
+                yestWs: v.execWs ? String(v.execWs) : '',
+                prevMtd: String((v.mtdSale || 0) - execTotal),
+                brands: r.brands.length ? r.brands : base.brands
+            });
+        }
+
+        function setFormLocked(locked) {
+            document.querySelectorAll('#mainForm input, #mainForm button').forEach(el => {
+                if (el.id === 'reportDate' || el.closest('#viewBanner') || el.closest('#dateHint')) return;
+                if (el.getAttribute('onclick') === 'copyOnly()' || el.getAttribute('onclick') === 'shareWhatsApp()') return;
+                el.disabled = locked;
+            });
+            $('mainForm').classList.toggle('view-mode', locked);
+        }
+
+        function enterViewMode(entry, liveDate) {
+            if (!viewMode) {
+                liveState = getState();
+                // date box pehle hi badal chuka hota hai, asli aaj ki date wapas rakho
+                liveState.reportDate = liveDate || readJSON(STORAGE_KEY, {}).reportDate || liveState.reportDate;
+            }
+            viewMode = true;
+            const snap = entry.state ? Object.assign({}, entry.state) : stateFromMessage(entry, liveState);
+            snap.reportDate = entry.date;
+            applyState(snap);               // viewMode ki wajah se save nahi hoga
+            $('msgPreview').value = entry.msg;
+            $('displayMtd').value = num(snap.prevMtd) + num(snap.yestRetail) + num(snap.yestWs);
+            setFormLocked(true);
+            $('viewDateText').textContent = formatDate(entry.date);
+            $('viewNote').textContent = entry.state
+                ? 'Sirf dekhne ke liye. Is mein kuch badla nahi jayega.'
+                : 'Ye purane message se bhari gayi hai. Sirf dekhne ke liye.';
+            $('viewBanner').classList.remove('hidden');
+            renderDateHint();
+        }
+
+        function exitViewMode(toast) {
+            if (!viewMode) return;
+            viewMode = false;
+            setFormLocked(false);
+            $('viewBanner').classList.add('hidden');
+            if (liveState) applyState(liveState);
+            liveState = null;
+            renderDateHint();
+            if (toast) showToast('Aaj ki entry par wapas aa gaye');
+        }
+
+        function onReportDateChange() {
+            const d = $('reportDate').value;
+            const liveDate = viewMode ? liveState.reportDate : (readJSON(STORAGE_KEY, {}).reportDate || '');
+
+            if (viewMode && d === liveDate) { exitViewMode(true); return; }
+            const entry = d ? findHistory(d) : null;
+            if (entry && d !== liveDate) { enterViewMode(entry, liveDate); return; }
+
+            if (viewMode) {
+                // Purani date se aisi date par gaye jiska record nahi
+                showToast(formatDate(d) + ' ki koi report save nahi', true);
+                $('reportDate').value = $('viewDateText').textContent ? reverseDate($('viewDateText').textContent) : liveDate;
+                return;
+            }
+            if (d && liveDate && d < liveDate) {
+                const ok = confirm(formatDate(d) + ' ki koi purani report save nahi hai.\n\nKya aaj wali entry ki date badal kar ' + formatDate(d) + ' karni hai?');
+                if (!ok) { $('reportDate').value = liveDate; return; }
+            }
+            calculateAll();
+            renderDateHint();
+        }
+        function reverseDate(ddmmyy) {
+            const p = ddmmyy.split('/');
+            return p.length === 3 ? `20${p[2]}-${p[1]}-${p[0]}` : '';
+        }
+
+        // Date ke neeche: pichle saved dinon ke chhote button
+        function renderDateHint() {
+            const box = $('dateHint');
+            if (!box) return;
+            const current = $('reportDate').value;
+            const dates = readJSON(HISTORY_KEY, []).map(h => h.date).filter(Boolean).slice(0, 6);
+            box.innerHTML = '';
+            if (!dates.length) return;
+            const lbl = document.createElement('span');
+            lbl.className = 'text-[10px] text-slate-500 self-center mr-1';
+            lbl.textContent = 'Saved:';
+            box.appendChild(lbl);
+            dates.forEach(d => {
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.className = 'date-chip' + (d === current ? ' active' : '');
+                b.textContent = formatDate(d).slice(0, 5);
+                b.addEventListener('click', () => { $('reportDate').value = d; onReportDateChange(); });
+                box.appendChild(b);
+            });
+            if (viewMode) {
+                const back = document.createElement('button');
+                back.type = 'button';
+                back.className = 'date-chip today';
+                back.textContent = 'Aaj';
+                back.addEventListener('click', () => exitViewMode(true));
+                box.appendChild(back);
+            }
+        }
+
+        // ---------- History ----------
+        function renderHistory() {
+            const list = $('historyList');
+            const history = readJSON(HISTORY_KEY, []);
+            list.innerHTML = '';
+            if (!history.length) {
+                list.innerHTML = '<p class="text-slate-400 text-center py-6 font-sans">Abhi koi history nahi hai</p>';
+                return;
+            }
+            history.forEach((h, idx) => {
+                const card = document.createElement('div');
+                card.className = 'bg-slate-900 border border-slate-700 rounded-xl p-3';
+                card.innerHTML = `
+                    <div class="flex justify-between items-center mb-2 font-sans">
+                        <span class="font-bold text-emerald-400"></span>
+                        <div class="flex gap-2">
+                            <button class="h-open text-[11px] bg-emerald-600/30 text-emerald-200 hover:bg-emerald-600/50 px-2 py-1 rounded"><i class="fa-regular fa-eye"></i> Kholein</button>
+                            <button class="h-copy text-[11px] bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded"><i class="fa-regular fa-copy"></i> Copy</button>
+                            <button class="h-del text-[11px] bg-red-500/20 text-red-400 hover:bg-red-500/30 px-2 py-1 rounded"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </div>
+                    <pre class="whitespace-pre-wrap text-slate-300 text-[11px] leading-relaxed"></pre>`;
+                card.querySelector('span').textContent = formatDate(h.date);
+                card.querySelector('pre').textContent = h.msg;
+                card.querySelector('.h-open').addEventListener('click', () => {
+                    closeHistoryModal();
+                    $('reportDate').value = h.date;
+                    onReportDateChange();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                });
+                card.querySelector('.h-copy').addEventListener('click', async () => {
+                    const ok = await copyText(h.msg);
+                    showToast(ok ? 'Purana message copy ho gaya' : 'Copy nahi hua', !ok);
+                });
+                card.querySelector('.h-del').addEventListener('click', () => {
+                    if (!confirm('Ye report delete karein?')) return;
+                    const hs = readJSON(HISTORY_KEY, []);
+                    hs.splice(idx, 1);
+                    writeJSON(HISTORY_KEY, hs);
+                    renderHistory();
+                    renderDateHint();
+                });
+                list.appendChild(card);
+            });
+        }
+
+        function openHistoryModal() {
+            renderHistory();
+            const m = $('historyModal');
+            m.classList.remove('hidden');
+            m.classList.add('flex');
+        }
+        function closeHistoryModal() {
+            const m = $('historyModal');
+            m.classList.add('hidden');
+            m.classList.remove('flex');
+        }
+        function clearHistory() {
+            if (!confirm('Saari history delete karein?')) return;
+            writeJSON(HISTORY_KEY, []);
+            renderHistory();
+            showToast('History clear ho gayi');
+        }
+
+        // ---------- PIN Lock ----------
+        const PIN_KEY = 'wa_sale_pin_v1';
+        const SESSION_KEY = 'wa_sale_unlocked';
+        let pinEntry = '';
+        let pinMode = 'enter';      // 'enter' | 'set' | 'confirm'
+        let pinFirst = '';
+        let pinAttempts = 0;
+        let pinLockedUntil = 0;
+
+        async function hashPin(pin) {
+            const text = 'wa-sale::' + pin;
+            try {
+                const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+                return 's:' + Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+            } catch (e) {
+                // purane browser ke liye simple hash
+                let h = 5381;
+                for (let i = 0; i < text.length; i++) h = ((h << 5) + h + text.charCodeAt(i)) >>> 0;
+                return 'd:' + h.toString(16);
+            }
+        }
+        function getSavedPin() { try { return localStorage.getItem(PIN_KEY); } catch (e) { return null; } }
+
+        function setLockText(title, sub) {
+            $('lockTitle').textContent = title;
+            $('lockSub').textContent = sub;
+        }
+        function renderDots() {
+            document.querySelectorAll('#pinDots .pin-dot').forEach((d, i) => d.classList.toggle('filled', i < pinEntry.length));
+        }
+        function lockError(msg) {
+            $('lockError').textContent = msg;
+            const dots = $('pinDots');
+            dots.classList.remove('shake'); void dots.offsetWidth; dots.classList.add('shake');
+            const ch = $('lockChar');
+            ch.classList.remove('char-shake'); void ch.offsetWidth; ch.classList.add('char-shake');
+            $('charMouth').setAttribute('d', 'M95 87 q6 -4 12 0');
+            setTimeout(() => $('charMouth').setAttribute('d', 'M95 84 q6 4 12 0'), 1100);
+            if (navigator.vibrate) navigator.vibrate(150);
+            pinEntry = '';
+            setTimeout(renderDots, 250);
+        }
+
+        const NAME_KEY = 'wa_sale_user_name';
+        let memUserName = '';
+        function getUserName() {
+            let n = '';
+            try { n = (localStorage.getItem(NAME_KEY) || '').trim(); } catch (e) {}
+            return n || memUserName;
+        }
+        function firstName(n) { return (n || '').split(/\s+/)[0]; }
+        function titleCase(n) { return n.toLowerCase().replace(/(^|\s)\S/g, c => c.toUpperCase()); }
+
+        function updateGreeting() {
+            const n = getUserName();
+            $('hdrGreeting').textContent = n ? 'Assalam o Alaikum, ' + titleCase(n) + ' \ud83d\udc4b' : 'Daily Sale Report & MTD Tracker';
+        }
+
+        function showNameStep() {
+            pinMode = 'name';
+            $('pinStep').classList.add('hidden');
+            $('nameStep').classList.remove('hidden');
+            $('forgotPinBtn').classList.add('hidden');
+            $('lockError').textContent = '';
+            setLockText('Assalam o Alaikum!', 'Is phone par app kaun chala raha hai?');
+            const sr = ($('srName').value || '').trim();
+            if (!$('userNameInput').value && sr) $('userNameInput').value = titleCase(sr);
+            setTimeout(() => $('userNameInput').focus(), 300);
+        }
+
+        function saveUserName() {
+            const n = $('userNameInput').value.trim().replace(/\s+/g, ' ');
+            if (n.length < 2) { lockError('Kam az kam 2 harf ka naam likhein'); return; }
+            memUserName = n;
+            try { localStorage.setItem(NAME_KEY, n); } catch (e) {}
+            $('userNameInput').value = '';
+            updateGreeting();
+            startLockScreen();
+        }
+
+        function changeUserName() {
+            const n = prompt('Apna naam likhein (login par yahi aayega):', getUserName());
+            if (n === null) return;
+            const v = n.trim().replace(/\s+/g, ' ');
+            if (v.length < 2) { showToast('Naam kam az kam 2 harf ka ho', true); return; }
+            try { localStorage.setItem(NAME_KEY, v); } catch (e) {}
+            updateGreeting();
+            showToast('Naam save ho gaya: ' + titleCase(v));
+        }
+
+        function startLockScreen() {
+            if (window.__noStorage) $('noStorageWarn').classList.remove('hidden');
+            pinEntry = ''; pinFirst = '';
+            $('lockError').textContent = '';
+            if (!getUserName()) { showNameStep(); return; }
+            $('nameStep').classList.add('hidden');
+            $('pinStep').classList.remove('hidden');
+            const nm = titleCase(firstName(getUserName()));
+            if (getSavedPin()) {
+                pinMode = 'enter';
+                setLockText('Welcome Back, ' + nm + '!', 'Apna 4 digit PIN dalein');
+                $('forgotPinBtn').classList.remove('hidden');
+            } else {
+                pinMode = 'set';
+                setLockText('Assalam o Alaikum, ' + nm + '!', 'Naya 4 digit PIN banayein');
+                $('forgotPinBtn').classList.add('hidden');
+            }
+            renderDots();
+        }
+
+        async function onPinComplete() {
+            const pin = pinEntry;
+            if (pinMode === 'set') {
+                pinFirst = pin; pinEntry = ''; pinMode = 'confirm';
+                setLockText('PIN Confirm Karein', 'Wohi PIN dobara dalein');
+                $('lockError').textContent = '';
+                setTimeout(renderDots, 150);
+                return;
+            }
+            if (pinMode === 'confirm') {
+                if (pin !== pinFirst) {
+                    pinMode = 'set'; pinFirst = '';
+                    setLockText(recoveringPin ? 'Malik Code sahi hai \u2713' : 'Assalam o Alaikum, ' + titleCase(firstName(getUserName())) + '!', 'Naya 4 digit PIN banayein');
+                    lockError('PIN match nahi hua, dobara banayein');
+                    return;
+                }
+                try { localStorage.setItem(PIN_KEY, await hashPin(pin)); } catch (e) {}
+                await makeSyncId(pin);
+                if (recoveringPin) {
+                    // Is phone ka data hi asal hai: naye PIN wali cloud jagah par yahi jaye
+                    try { localStorage.setItem(LOCAL_TS_KEY, String(Date.now())); } catch (e) {}
+                    recoveringPin = false;
+                    unlockApp('Naya PIN lag gaya! Data safe hai \u2713');
+                    return;
+                }
+                unlockApp('PIN set ho gaya!');
+                return;
+            }
+            // enter mode
+            if (Date.now() < pinLockedUntil) {
+                lockError('Thori der ruk kar try karein');
+                return;
+            }
+            if ((await hashPin(pin)) === getSavedPin()) {
+                pinAttempts = 0;
+                if (!getSyncId()) await makeSyncId(pin);
+                unlockApp();
+            } else {
+                pinAttempts++;
+                if (pinAttempts >= 5) {
+                    pinLockedUntil = Date.now() + 30000;
+                    pinAttempts = 0;
+                    lockError('5 ghalat PIN! 30 second baad try karein');
+                } else {
+                    lockError('Ghalat PIN (' + (5 - pinAttempts) + ' try baqi)');
+                }
+            }
+        }
+
+        function pressKey(k) {
+            if (pinMode === 'name') return;
+            if (pinMode === 'enter' && Date.now() < pinLockedUntil) {
+                $('lockError').textContent = 'Thori der ruk kar try karein';
+                return;
+            }
+            if (k === 'back') { pinEntry = pinEntry.slice(0, -1); }
+            else if (k === 'clear') { pinEntry = ''; }
+            else if (pinEntry.length < 4) {
+                pinEntry += k;
+                $('lockError').textContent = '';
+            }
+            renderDots();
+            if (pinEntry.length === 4) setTimeout(onPinComplete, 120);
+        }
+
+        function unlockApp(msg) {
+            try { sessionStorage.setItem(SESSION_KEY, '1'); } catch (e) {}
+            setTimeout(() => cloudSyncNow(false), 900);
+            const ch = $('charBody');
+            ch.classList.add('char-happy');
+            $('charMouth').setAttribute('d', 'M93 83 q8 8 16 0');
+            setTimeout(() => {
+                $('lockScreen').classList.add('lock-hide');
+                document.body.classList.remove('locked');
+                ch.classList.remove('char-happy');
+                $('charMouth').setAttribute('d', 'M95 84 q6 4 12 0');
+                showToast(msg || ('Khush aamdeed, ' + titleCase(firstName(getUserName())) + '!'));
+            }, 650);
+        }
+
+        function lockApp() {
+            try { sessionStorage.removeItem(SESSION_KEY); } catch (e) {}
+            closeHistoryModal();
+            document.body.classList.add('locked');
+            $('lockScreen').classList.remove('lock-hide');
+            startLockScreen();
+        }
+
+
+        // ---------- Malik Code (PIN recovery) ----------
+        let recoveringPin = false;
+
+        async function hashMalik(code) {
+            const text = 'wa-malik-code::' + code.trim();
+            try {
+                const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+                return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+            } catch (e) {
+                let h1 = 7, h2 = 99991;
+                for (let i = 0; i < text.length; i++) { const c = text.charCodeAt(i); h1 = (h1 * 31 + c) >>> 0; h2 = (h2 * 37) ^ c; }
+                return ('m' + h1.toString(16) + (h2 >>> 0).toString(16)).padEnd(64, '0').slice(0, 64);
+            }
+        }
+
+        function refreshMalikStatus() {
+            const on = !!MALIK_CODE_HASH;
+            $('malikActiveCard').classList.toggle('hidden', !on);
+            $('malikMenuStatus').textContent = on ? 'Malik Code laga hua hai \u2713' : 'Malik Code & GitHub settings';
+        }
+
+        async function buildMalikSettings() {
+            const a = $('malikCode1').value.trim(), b = $('malikCode2').value.trim();
+            if (a.length < 6) { showToast('Malik Code kam az kam 6 harf/number ka ho', true); return; }
+            if (a !== b) { showToast('Dono codes match nahi hue', true); return; }
+            const h = await hashMalik(a);
+            const cfg = getFirebaseConfig();
+            const lines =
+                "const FIREBASE_CONFIG_ENC = '" + (cfg ? encodeCfg(cfg) : '') + "';\n" +
+                "const MALIK_CODE_HASH = '" + h + "';";
+            $('malikOut').value = lines;
+            $('malikOutBox').classList.remove('hidden');
+            $('malikNoCfgNote').classList.toggle('hidden', !!cfg);
+            $('malikCode1').value = ''; $('malikCode2').value = '';
+            $('malikOutBox').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        async function copyMalikLines() {
+            const ok = await copyText($('malikOut').value);
+            showToast(ok ? 'Lines copy ho gayi! Ab GitHub par paste karein' : 'Copy nahi hua, khud select karke copy karein', !ok);
+        }
+
+        function wipeAndRestart() {
+            const ok = confirm('Is phone ka SAARA data aur history delete ho jayegi aur naya naam/PIN banega.\n\n(Cloud par purana data mehfooz rahega.)\n\nKya aap sure hain?');
+            if (!ok) return;
+            const word = prompt('Confirm karne ke liye DELETE likhein:');
+            if ((word || '').trim().toUpperCase() !== 'DELETE') { showToast('Cancel ho gaya', true); return; }
+            try {
+                [PIN_KEY, NAME_KEY, STORAGE_KEY, HISTORY_KEY, UNDO_KEY, SYNC_ID_KEY, LOCAL_TS_KEY, LAST_SYNC_KEY].forEach(k => localStorage.removeItem(k));
+            } catch (e) {}
+            memUserName = '';
+            applyState(defaultState);
+            openSheet('openingSheet');
+            startLockScreen();
+        }
+
+        let malikTries = 0, malikLockedUntil = 0;
+        async function forgotPin() {
+            if (!MALIK_CODE_HASH) { wipeAndRestart(); return; }
+            if (Date.now() < malikLockedUntil) { lockError('Thori der ruk kar try karein'); return; }
+            const code = prompt('PIN bhool gaye?\n\nMalik Code dalein. Naya PIN ban jayega aur data SAFE rahega.\n\n(Malik Code nahi pata? Cancel dabayein)');
+            if (code === null) {
+                if (confirm('Malik Code ke baghair sirf SAARA data mita kar naya shuru ho sakta hai.\n\nYe karna hai?')) wipeAndRestart();
+                return;
+            }
+            if ((await hashMalik(code)) !== MALIK_CODE_HASH) {
+                malikTries++;
+                if (malikTries >= 3) { malikTries = 0; malikLockedUntil = Date.now() + 60000; lockError('3 ghalat Malik Code! 1 minute baad try karein'); }
+                else lockError('Malik Code ghalat hai');
+                return;
+            }
+            malikTries = 0;
+            recoveringPin = true;
+            pinMode = 'set'; pinEntry = ''; pinFirst = '';
+            pinAttempts = 0; pinLockedUntil = 0;
+            $('forgotPinBtn').classList.add('hidden');
+            $('lockError').textContent = '';
+            setLockText('Malik Code sahi hai \u2713', 'Ab ' + titleCase(firstName(getUserName())) + ' ka naya 4 digit PIN banayein');
+            renderDots();
+        }
+
+        document.querySelectorAll('#keypad .key').forEach(b =>
+            b.addEventListener('click', () => pressKey(b.dataset.k)));
+
+        // Computer keyboard se bhi PIN
+        document.addEventListener('keydown', e => {
+            if (!document.body.classList.contains('locked')) return;
+            if (pinMode === 'name') { if (e.key === 'Enter') saveUserName(); return; }
+            if (/^[0-9]$/.test(e.key)) pressKey(e.key);
+            else if (e.key === 'Backspace') pressKey('back');
+            else if (e.key === 'Escape') pressKey('clear');
+        });
+
+        function initLock() {
+            let unlocked = false;
+            try { unlocked = sessionStorage.getItem(SESSION_KEY) === '1'; } catch (e) {}
+            if (unlocked && getSavedPin()) {
+                $('lockScreen').classList.add('lock-hide');
+                document.body.classList.remove('locked');
+                setTimeout(() => cloudSyncNow(false), 900);
+            } else {
+                startLockScreen();
+            }
+        }
+
+
+
+        // ---------- Theme: Day / Night / Neon ----------
+        const THEME_KEY = 'wa_sale_theme';
+        const THEMES = ['day', 'night', 'neon'];
+        const THEME_META = { day: '#f1f5f9', night: '#0f172a', neon: '#07021a' };
+        const THEME_ICON = { day: 'fa-sun', night: 'fa-moon', neon: 'fa-bolt' };
+        const THEME_NAME = { day: 'Day Mode \u2600\ufe0f', night: 'Night Mode \ud83c\udf19', neon: 'Neon Mode \u26a1' };
+
+        function currentTheme() { return document.documentElement.getAttribute('data-theme') || 'night'; }
+
+        function setTheme(t, silent) {
+            if (!THEMES.includes(t)) t = 'night';
+            const root = document.documentElement;
+            root.classList.add('theme-anim');
+            root.setAttribute('data-theme', t);
+            try { localStorage.setItem(THEME_KEY, t); } catch (e) {}
+            const meta = document.querySelector('meta[name="theme-color"]');
+            if (meta) meta.setAttribute('content', THEME_META[t]);
+            $('themeQuickBtn').innerHTML = `<i class="fa-solid ${THEME_ICON[t]}"></i>`;
+            document.querySelectorAll('[data-theme-btn]').forEach(b => b.classList.toggle('active', b.dataset.themeBtn === t));
+            setTimeout(() => root.classList.remove('theme-anim'), 450);
+            if (!silent) showToast(THEME_NAME[t]);
+        }
+        function cycleTheme() {
+            setTheme(THEMES[(THEMES.indexOf(currentTheme()) + 1) % THEMES.length]);
+        }
+
+
+        // ---------- Install (PWA) + Offline ----------
+        let installPrompt = null;
+        window.addEventListener('beforeinstallprompt', e => {
+            e.preventDefault();
+            installPrompt = e;
+            $('installMenuItem').classList.remove('hidden');
+        });
+        window.addEventListener('appinstalled', () => {
+            installPrompt = null;
+            $('installMenuItem').classList.add('hidden');
+            showToast('App install ho gaya! Home screen dekhein');
+        });
+        async function installApp() {
+            if (!installPrompt) {
+                showToast('Chrome menu (\u22ee) \u2192 "Install app" / "Add to Home screen" dabayein');
+                return;
+            }
+            installPrompt.prompt();
+            try { await installPrompt.userChoice; } catch (e) {}
+            installPrompt = null;
+            $('installMenuItem').classList.add('hidden');
+        }
+        if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(() => {});
+            });
+        }
+
+        // ---------- Menu & Sheets ----------
+        function openMenu() {
+            $('menuUser').textContent = getUserName() || 'Sale Generator';
+            $('menuSr').textContent = ($('srName').value || '') + ($('cityName').value ? ' \u00b7 ' + $('cityName').value : '');
+            $('sideMenu').classList.add('open');
+            $('menuBackdrop').classList.add('show');
+        }
+        function closeMenu() {
+            $('sideMenu').classList.remove('open');
+            $('menuBackdrop').classList.remove('show');
+        }
+        function openSheet(id) {
+            if (viewMode) exitViewMode(false);
+            if (id === 'openingSheet') prefillOpeningDate();
+            if (id === 'formatSheet') $('fmtResult').classList.add('hidden');
+            if (id === 'cloudSheet') refreshCloudStatus();
+            if (id === 'malikSheet') { refreshMalikStatus(); $('malikOutBox').classList.add('hidden'); }
+            $(id).classList.add('open');
+            $(id + 'Backdrop').classList.add('show');
+            document.body.classList.add('sheet-open');
+        }
+        function closeSheet(id) {
+            $(id).classList.remove('open');
+            $(id + 'Backdrop').classList.remove('show');
+            if (!document.querySelector('.bottom-sheet.open')) document.body.classList.remove('sheet-open');
+        }
+        document.addEventListener('keydown', e => {
+            if (e.key !== 'Escape') return;
+            closeMenu();
+            document.querySelectorAll('.bottom-sheet.open').forEach(sh => closeSheet(sh.id));
+        });
+
+        // Sheet ko neeche kheench kar band karna
+        document.querySelectorAll('.bottom-sheet').forEach(sh => {
+            const handle = sh.querySelector('.sheet-handle');
+            const head = sh.querySelector('.sheet-head');
+            let startY = null, dy = 0;
+            const start = e => { startY = e.touches[0].clientY; dy = 0; sh.style.transition = 'none'; };
+            const move = e => {
+                if (startY === null) return;
+                dy = Math.max(0, e.touches[0].clientY - startY);
+                sh.style.transform = `translateY(${dy}px)`;
+            };
+            const end = () => {
+                if (startY === null) return;
+                sh.style.transition = ''; sh.style.transform = '';
+                if (dy > 90) closeSheet(sh.id);
+                startY = null;
+            };
+            [handle, head].forEach(el => {
+                el.addEventListener('touchstart', start, { passive: true });
+                el.addEventListener('touchmove', move, { passive: true });
+                el.addEventListener('touchend', end);
+            });
+        });
+
+        async function pasteFromClipboard(id) {
+            try {
+                const t = await navigator.clipboard.readText();
+                if (t) { $(id).value = t; showToast('Paste ho gaya'); return; }
+            } catch (e) {}
+            $(id).focus();
+            showToast('Box ko dabaa kar rakhein aur "Paste" chunein', true);
+        }
+
+        // ---------- Message se Format pehchanna ----------
+        const FIELD_LABELS = {
+            sr: 'SR Name', city: 'City', date: 'Date', todayBooking: 'Today Booking',
+            retailBooking: 'Retail', wsBooking: 'W/S', brandsList: 'Focus Brands',
+            yestBooking: 'Yesterday Booking', execTotal: 'Execution',
+            execRetail: 'Exec Retail', execWs: 'Exec W/S', mtdSale: 'MTD Sale'
+        };
+
+        function parseReportMessage(text) {
+            const lines = (text || '').replace(/\r/g, '').split('\n');
+            const out = [], found = {}, values = {}, brands = [];
+            let section = '', fmt = null, brandsPlaced = false;
+
+            // line ke aakhir wala number alag karo: "Retail...12420" -> "Retail..." + "12420"
+            const splitNum = line => {
+                const m = line.match(/^(.*?)(\d[\d,]*(?:\.\d+)?)?\s*$/);
+                return { prefix: m[1], value: m[2] || '' };
+            };
+            const splitText = line => {
+                const i = line.search(/[=:]/);
+                if (i < 0) return null;
+                const after = line.slice(i + 1);
+                const sp = after.match(/^\s*/)[0];
+                return { prefix: line.slice(0, i + 1) + sp, value: after.trim() };
+            };
+
+            for (const line of lines) {
+                const t = line.toLowerCase().replace(/[*_~]/g, '').trim();
+                if (!t) { out.push(line); continue; }
+                let key = null;
+
+                if (/^s\s*\.?\s*r\b/.test(t)) key = 'sr';
+                else if (/^city\b/.test(t)) key = 'city';
+                else if (/^date\b/.test(t)) key = 'date';
+                else if (/today\s*booking/.test(t)) { key = 'todayBooking'; section = 'today'; }
+                else if (/exec/.test(t)) { key = 'execTotal'; section = 'exec'; }
+                else if (/yesterday|yest/.test(t)) { key = 'yestBooking'; section = 'yest'; }
+                else if (/\bmtd\b/.test(t)) { key = 'mtdSale'; section = ''; }
+                else if (/focus/.test(t)) { section = 'brands'; out.push(line); continue; }
+                else if (section !== 'brands' && /^retail/.test(t)) key = section === 'today' ? 'retailBooking' : 'execRetail';
+                else if (section !== 'brands' && /^w\s*\/\s*s/.test(t)) key = section === 'today' ? 'wsBooking' : 'execWs';
+
+                if (!key && section === 'brands') {
+                    const { prefix, value } = splitNum(line);
+                    const lead = prefix.match(/^[*_~\s]*/)[0];
+                    const rest = prefix.slice(lead.length);
+                    const trail = rest.match(/[*_~:=\s]*$/)[0];
+                    const name = rest.slice(0, rest.length - trail.length).trim();
+                    if (name) {
+                        if (!fmt) fmt = lead.trimStart() + '{name}' + trail + '{amount}';
+                        brands.push({ name, amount: value.replace(/,/g, '') });
+                        if (!brandsPlaced) { out.push('{brandsList}'); brandsPlaced = true; found.brandsList = true; }
+                        continue;
+                    }
+                }
+
+                if (!key) { out.push(line); continue; }
+                if (found[key]) { out.push(line); continue; }   // dobara wali line jaisi hai waisi
+                found[key] = true;
+
+                if (key === 'sr' || key === 'city') {
+                    const r = splitText(line);
+                    if (r) { out.push(r.prefix + '{' + key + '}'); values[key] = r.value; }
+                    else { out.push(line); delete found[key]; }
+                } else if (key === 'date') {
+                    const m = line.match(/^(.*?)(\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4})\s*$/);
+                    if (m) { out.push(m[1] + '{date}'); values.date = m[2]; }
+                    else {
+                        const r = splitText(line);
+                        if (r) { out.push(r.prefix + '{date}'); values.date = r.value; }
+                        else { out.push(line); delete found.date; }
+                    }
+                } else {
+                    const { prefix, value } = splitNum(line);
+                    out.push(prefix + '{' + key + '}');
+                    values[key] = num(value.replace(/,/g, ''));
+                }
+            }
+            return { template: out.join('\n').replace(/\s+$/, ''), found, values, brands, fmt };
+        }
+
+        function buildFormatFromPaste() {
+            const text = $('pasteMsg').value;
+            if (!text.trim()) { showToast('Pehle apna message paste karein', true); return; }
+            const r = parseReportMessage(text);
+            const count = Object.keys(r.found).length;
+            if (count < 2) { showToast('Is message mein report wali lines nahi mili', true); return; }
+
+            $('msgTemplate').value = r.template;
+            if (r.fmt) brandFmt = r.fmt;
+            if ($('fmtUpdateSr').checked) {
+                if (r.values.sr) $('srName').value = r.values.sr;
+                if (r.values.city) $('cityName').value = r.values.city;
+            }
+            if ($('fmtUpdateBrands').checked && r.brands.length) {
+                const old = {};
+                getBrandsArray(true).forEach(b => old[b.name.toLowerCase()] = b.amount);
+                renderBrands(r.brands.map(b => ({ name: b.name, amount: old[b.name.toLowerCase()] ?? '' })));
+            }
+            calculateAll();
+
+            const chips = $('fmtChips');
+            chips.innerHTML = '';
+            Object.keys(FIELD_LABELS).forEach(k => {
+                const ok = !!r.found[k];
+                const c = document.createElement('span');
+                c.className = 'chip ' + (ok ? 'chip-ok' : 'chip-miss');
+                c.innerHTML = `<i class="fa-solid ${ok ? 'fa-check' : 'fa-minus'}"></i>`;
+                c.append(' ' + FIELD_LABELS[k] + (k === 'brandsList' && ok ? ' (' + r.brands.length + ')' : ''));
+                chips.appendChild(c);
+            });
+            $('fmtResult').classList.remove('hidden');
+            $('fmtResult').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            showToast('Format ban gaya! ' + count + ' cheezein mili');
+        }
+
+        function openingFromPaste() {
+            const text = $('openPasteMsg').value;
+            if (!text.trim()) { showToast('Pehle pichla message paste karein', true); return; }
+            const { values: v } = parseReportMessage(text);
+            let filled = 0;
+            if (v.date) {
+                const p = v.date.split(/[\/\-.]/).map(Number);
+                if (p.length === 3) {
+                    const y = p[2] < 100 ? 2000 + p[2] : p[2];
+                    $('openDate').value = `${y}-${String(p[1]).padStart(2, '0')}-${String(p[0]).padStart(2, '0')}`;
+                    filled++;
+                }
+            }
+            let retail = v.retailBooking, ws = v.wsBooking;
+            if (retail === undefined && ws === undefined && v.todayBooking !== undefined) retail = v.todayBooking;
+            if (retail !== undefined) { $('openRetail').value = retail || ''; filled++; }
+            if (ws !== undefined) { $('openWs').value = ws || ''; }
+            if (v.mtdSale !== undefined) { $('openMtd').value = v.mtdSale || ''; filled++; }
+            if (!filled) { showToast('Message mein Date / Booking / MTD nahi mili', true); return; }
+            showToast('Bhar gaya! Check karke "Apply Opening" dabayein');
+        }
+
+
+        // =========================================================
+        //  CLOUD SYNC (Firebase) \u2014 sirf naam + PIN, koi email nahi
+        // =========================================================
+        // Agar aap config yahan code mein hi daal dein to har phone par khud jur jayega:
+
+        const FB_VERSION = '10.12.2';
+        const FB_CFG_KEY = 'wa_sale_fb_config';
+        const SYNC_ID_KEY = 'wa_sale_sync_id';
+        const LOCAL_TS_KEY = 'wa_sale_local_ts';
+        const LAST_SYNC_KEY = 'wa_sale_last_sync';
+        const FB_COLLECTION = 'saleReports';
+
+        let fbHandle = null, fbInitPromise = null, cloudApplying = false, pushTimer = null, syncing = false;
+
+        function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+        function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+
+        function getFirebaseConfig() {
+            if (FIREBASE_CONFIG && FIREBASE_CONFIG.apiKey) return FIREBASE_CONFIG;
+            try { const c = JSON.parse(lsGet(FB_CFG_KEY) || 'null'); return c && c.apiKey && c.projectId ? c : null; }
+            catch (e) { return null; }
+        }
+        function getSyncId() { return lsGet(SYNC_ID_KEY); }
+
+        // Naam + PIN se ek lambi ID banti hai (SHA-256). Asal PIN cloud par nahi jata.
+        async function makeSyncId(pin) {
+            const name = getUserName().toLowerCase().replace(/\s+/g, ' ').trim();
+            const text = 'wa-sale-sync::' + name + '::' + pin;
+            let id = '';
+            try {
+                const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+                id = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+            } catch (e) {
+                let h1 = 5381, h2 = 52711;
+                for (let i = 0; i < text.length; i++) { const c = text.charCodeAt(i); h1 = (h1 * 33) ^ c; h2 = (h2 * 33) ^ c; }
+                id = ((h1 >>> 0).toString(16) + (h2 >>> 0).toString(16)).padEnd(64, '0').slice(0, 64);
+            }
+            lsSet(SYNC_ID_KEY, id);
+            return id;
+        }
+
+        // Firebase ke code jese bhi paste karein, usse config nikaal lo
+        function parseFirebaseConfig(text) {
+            const cfg = {};
+            const re = /["']?(apiKey|authDomain|projectId|storageBucket|messagingSenderId|appId|measurementId|databaseURL)["']?\s*:\s*["']([^"']+)["']/g;
+            let m;
+            while ((m = re.exec(text || ''))) cfg[m[1]] = m[2].trim();
+            return cfg.apiKey && cfg.projectId ? cfg : null;
+        }
+
+        async function initFirebase() {
+            if (fbHandle) return fbHandle;
+            if (fbInitPromise) return fbInitPromise;
+            const cfg = getFirebaseConfig();
+            if (!cfg) throw new Error('NO_CONFIG');
+            fbInitPromise = (async () => {
+                const base = 'https://www.gstatic.com/firebasejs/' + FB_VERSION + '/';
+                const [appMod, authMod, fs] = await Promise.all([
+                    import(base + 'firebase-app.js'),
+                    import(base + 'firebase-auth.js'),
+                    import(base + 'firebase-firestore.js')
+                ]);
+                const app = appMod.getApps().length ? appMod.getApp() : appMod.initializeApp(cfg);
+                const auth = authMod.getAuth(app);
+                if (!auth.currentUser) await authMod.signInAnonymously(auth);
+                fbHandle = { db: fs.getFirestore(app), fs };
+                return fbHandle;
+            })();
+            try { return await fbInitPromise; }
+            catch (e) { fbInitPromise = null; throw e; }
+        }
+
+        function friendlyFbError(e) {
+            const code = (e && (e.code || e.message)) || '';
+            if (code === 'NO_CONFIG') return 'Firebase config nahi mila';
+            if (/admin-restricted|operation-not-allowed/.test(code)) return 'Firebase mein "Anonymous" login on nahi hai';
+            if (/permission-denied|insufficient/.test(code)) return 'Firestore Rules sahi nahi lage';
+            if (/api-key|invalid-api-key/.test(code)) return 'apiKey ghalat hai, config dobara paste karein';
+            if (/network|offline|unavailable|Failed to fetch|import/i.test(code) || !navigator.onLine) return 'Internet nahi hai, net aane par sync hoga';
+            if (/not-found|NOT_FOUND/.test(code)) return 'Firestore Database abhi bana nahi';
+            return 'Sync nahi hua: ' + String(code).slice(0, 80);
+        }
+
+        function setCloudStatus(kind, title, sub) {
+            const icon = $('cloudStatusIcon'), dot = $('cloudDot');
+            const map = {
+                off:  ['fa-cloud', 'cs-off'],
+                busy: ['fa-rotate fa-spin', 'cs-busy'],
+                ok:   ['fa-cloud-arrow-up', 'cs-ok'],
+                err:  ['fa-triangle-exclamation', 'cs-err']
+            }[kind];
+            icon.className = 'w-11 h-11 rounded-2xl flex items-center justify-center text-lg ' + map[1];
+            icon.innerHTML = `<i class="fa-solid ${map[0]}"></i>`;
+            dot.className = 'cloud-dot ' + map[1];
+            $('cloudStatusTitle').textContent = title;
+            $('cloudStatusSub').textContent = sub || '';
+            $('cloudMenuStatus').textContent = title;
+        }
+
+        function refreshCloudStatus() {
+            const baked = !!(FIREBASE_CONFIG && FIREBASE_CONFIG.apiKey);
+            $('cfgBakedNote').classList.toggle('hidden', !baked);
+            $('cfgPasteBox').classList.toggle('hidden', baked);
+            if (!getFirebaseConfig()) { setCloudStatus('off', 'Jura hua nahi', 'Neeche Firebase config paste karein'); return; }
+            const last = num(lsGet(LAST_SYNC_KEY));
+            setCloudStatus(last ? 'ok' : 'off', last ? 'Cloud se jura hua \u2713' : 'Config save hai',
+                last ? 'Aakhri sync: ' + new Date(last).toLocaleString() : 'Sync ka intezar...');
+        }
+
+        function onLocalDataChanged() {
+            if (cloudApplying) return;
+            lsSet(LOCAL_TS_KEY, String(Date.now()));
+            if (!getFirebaseConfig() || !getSyncId()) return;
+            clearTimeout(pushTimer);
+            pushTimer = setTimeout(() => pushToCloud(), 4000);
+        }
+
+        async function pushToCloud() {
+            const id = getSyncId();
+            if (!id || !getFirebaseConfig()) return false;
+            const f = await initFirebase();
+            const ts = num(lsGet(LOCAL_TS_KEY)) || Date.now();
+            await f.fs.setDoc(f.fs.doc(f.db, FB_COLLECTION, id), {
+                stateJson: lsGet(STORAGE_KEY) || 'null',
+                historyJson: lsGet(HISTORY_KEY) || '[]',
+                updatedAtMs: ts,
+                name: getUserName(),
+                serverTime: f.fs.serverTimestamp()
+            });
+            lsSet(LAST_SYNC_KEY, String(Date.now()));
+            refreshCloudStatus();
+            return true;
+        }
+
+        // Cloud aur phone ka data milao: jo naya ho woh jeetay, history dono ki jama
+        async function cloudSyncNow(manual) {
+            if (syncing) return;
+            if (!getFirebaseConfig()) { if (manual) showToast('Pehle Firebase config paste karein', true); refreshCloudStatus(); return; }
+            if (!getSyncId()) { if (manual) showToast('Ek dafa lock karke PIN dobara dalein', true); return; }
+            if (document.body.classList.contains('locked')) return;
+            syncing = true;
+            setCloudStatus('busy', 'Sync ho raha hai...', 'Thora intezar karein');
+            try {
+                const f = await initFirebase();
+                const snap = await f.fs.getDoc(f.fs.doc(f.db, FB_COLLECTION, getSyncId()));
+                const localTs = num(lsGet(LOCAL_TS_KEY));
+                let restored = false;
+
+                if (snap.exists()) {
+                    const c = snap.data();
+                    const cloudTs = num(c.updatedAtMs);
+                    let cState = null, cHist = [];
+                    try { cState = JSON.parse(c.stateJson || 'null'); } catch (e) {}
+                    try { cHist = JSON.parse(c.historyJson || '[]') || []; } catch (e) {}
+                    const cloudNewer = cloudTs > localTs;
+
+                    // History jama karo (ek date ki ek report)
+                    const byDate = {};
+                    const localHist = readJSON(HISTORY_KEY, []);
+                    (cloudNewer ? localHist : cHist).forEach(h => { if (h && h.date) byDate[h.date] = h; });
+                    (cloudNewer ? cHist : localHist).forEach(h => { if (h && h.date) byDate[h.date] = h; });
+                    const merged = Object.values(byDate).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 200);
+
+                    cloudApplying = true;
+                    try {
+                        writeJSON(HISTORY_KEY, merged);
+                        if (cloudNewer && cState) {
+                            if (viewMode) exitViewMode(false);
+                            applyState(cState);
+                            lsSet(LOCAL_TS_KEY, String(cloudTs));
+                            restored = true;
+                        }
+                    } finally { cloudApplying = false; }
+                    renderDateHint();
+
+                    const needPush = !cloudNewer && localTs > cloudTs || JSON.stringify(merged) !== JSON.stringify(cHist);
+                    if (needPush) await pushToCloud();
+                } else {
+                    await pushToCloud();
+                }
+                lsSet(LAST_SYNC_KEY, String(Date.now()));
+                refreshCloudStatus();
+                if (restored && !localTs) showToast('\u2601\ufe0f Aapka purana data cloud se wapas aa gaya!');
+                else if (restored) showToast('\u2601\ufe0f Doosre phone wala naya data aa gaya');
+                else if (manual) showToast('\u2601\ufe0f Sync ho gaya');
+            } catch (e) {
+                const msg = friendlyFbError(e);
+                setCloudStatus('err', 'Sync nahi hua', msg);
+                if (manual) showToast(msg, true);
+            } finally {
+                syncing = false;
+            }
+        }
+
+        async function saveFirebaseConfig() {
+            const cfg = parseFirebaseConfig($('fbConfigInput').value);
+            if (!cfg) { showToast('Config samajh nahi aaya. Firebase wala poora code paste karein', true); return; }
+            lsSet(FB_CFG_KEY, JSON.stringify(cfg));
+            fbHandle = null; fbInitPromise = null;
+            $('fbConfigInput').value = '';
+            showToast('Config save ho gaya, jor rahe hain...');
+            await cloudSyncNow(true);
+        }
+
+        function removeFirebaseConfig() {
+            if (!lsGet(FB_CFG_KEY)) { showToast('Pehle se jura hua nahi', true); return; }
+            if (!confirm('Is phone ko Firebase se hata dein? (Cloud ka data delete nahi hoga)')) return;
+            try { localStorage.removeItem(FB_CFG_KEY); localStorage.removeItem(LAST_SYNC_KEY); } catch (e) {}
+            fbHandle = null; fbInitPromise = null;
+            refreshCloudStatus();
+            showToast('Firebase se hata diya');
+        }
+
+        window.addEventListener('online', () => { if (getFirebaseConfig()) cloudSyncNow(false); });
+        document.addEventListener('visibilitychange', () => {
+            // App band karte waqt jo baqi hai foran bhej do
+            if (document.visibilityState === 'hidden' && pushTimer) {
+                clearTimeout(pushTimer); pushTimer = null;
+                pushToCloud().catch(() => {});
+            }
+        });
+
+        // ---------- Opening Setup ----------
+        function prefillOpeningDate() {
+            if (!$('openDate').value) {
+                const d = new Date();
+                d.setDate(d.getDate() - 1);
+                $('openDate').value = localDateStr(d);
+            }
+        }
+
+        function applyOpening() {
+            const openDate = $('openDate').value;
+            if (!openDate) { showToast('Pichli report ki date dalein', true); return; }
+            const retail = $('openRetail').value;
+            const ws = $('openWs').value;
+            const mtd = num($('openMtd').value);
+            const newMonth = $('openNewMonth').checked;
+
+            if (!num(retail) && !num(ws) && !mtd && !newMonth) {
+                if (!confirm('Booking aur MTD dono 0 hain. Phir bhi apply karein?')) return;
+            }
+
+            const current = getState();
+            writeJSON(UNDO_KEY, current);
+
+            // Pichli report ke agle din se kaam shuru:
+            // us din ki booking = aaj ki Yesterday/Execution
+            // us report ki MTD = "Kal tak ki MTD"
+            applyState(Object.assign({}, current, {
+                reportDate: nextDate(openDate),
+                yestRetail: retail,
+                yestWs: ws,
+                prevMtd: newMonth ? '0' : String(mtd),
+                todayRetail: '',
+                todayWs: '',
+                brands: current.brands.map(b => ({ name: b.name, amount: '' }))
+            }));
+
+            const pasted = $('openPasteMsg').value.trim();
+            if (pasted && !readJSON(HISTORY_KEY, []).some(h => h.date === openDate)) {
+                saveHistoryEntry({ date: openDate, savedAt: new Date().toLocaleString(), msg: pasted, state: null });
+            }
+            ['openRetail', 'openWs', 'openMtd'].forEach(id => $(id).value = '');
+            $('openNewMonth').checked = false;
+            $('openDate').value = '';
+            $('openPasteMsg').value = '';
+            closeSheet('openingSheet');
+            showToast('Opening set! ' + formatDate(nextDate(openDate)) + ' ka din ready');
+        }
+
+        // ---------- Template / Reset ----------
+        function resetTemplate() {
+            if (!confirm('Default format wapas lagayein?')) return;
+            $('msgTemplate').value = defaultTemplate;
+            brandFmt = DEFAULT_BRAND_FMT;
+            calculateAll();
+            showToast('Default format lag gaya');
+        }
+        function resetData() {
+            if (viewMode) exitViewMode(false);
+            if (!confirm('Saara data reset karein? (History safe rahegi)')) return;
+            try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+            applyState(defaultState);
+            openSheet('openingSheet');
+            showToast('Reset ho gaya, ab Opening set karein');
+        }
+
+        // ---------- Toast ----------
+        let toastTimer;
+        function showToast(text, isError) {
+            const t = $('toast');
+            $('toastText').textContent = text;
+            t.classList.toggle('bg-emerald-600', !isError);
+            t.classList.toggle('bg-red-600', !!isError);
+            t.classList.remove('translate-y-20', 'opacity-0');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => t.classList.add('translate-y-20', 'opacity-0'), 2500);
+        }
+
+        // Modal ke bahar tap karne se band
+        $('historyModal').addEventListener('click', e => {
+            if (e.target.id === 'historyModal') closeHistoryModal();
+        });
+
+        setTheme(currentTheme(), true);
+        refreshCloudStatus();
+        refreshMalikStatus();
+        loadData();
+        renderDateHint();
+        updateGreeting();
+        initLock();
+    </script>
+</body>
+</html>
